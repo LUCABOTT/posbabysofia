@@ -19,7 +19,6 @@ services:
     networks:
       - posbabysofia-network
 
-
   backend:
     build:
       context: ./backend
@@ -33,12 +32,14 @@ services:
 
     environment:
       PORT: 3000
-
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
 
     volumes:
       - ./backend:/app
@@ -50,10 +51,26 @@ services:
     networks:
       - posbabysofia-network
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: posbabysofia-pgadmin
+    restart: unless-stopped
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@posbabysofia.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+
+    ports:
+      - "5050:80"
+
+    depends_on:
+      - postgres
+
+    networks:
+      - posbabysofia-network
 
 volumes:
   postgres_data:
-
 
 networks:
   posbabysofia-network:

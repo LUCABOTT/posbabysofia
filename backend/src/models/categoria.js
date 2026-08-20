@@ -3,26 +3,25 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-    class Role extends Model {
+    class Categoria extends Model {
         static associate(models) {
-            Role.hasMany(models.User, {
-                foreignKey: 'rol_id',
-                as: 'usuarios'
+            Categoria.hasMany(models.Producto, {
+                foreignKey: 'categoria_id',
+                as: 'productos'
             });
         }
     }
 
-    Role.init(
+    Categoria.init(
         {
             id: {
                 type: DataTypes.BIGINT,
                 autoIncrement: true,
-                primaryKey: true,
-                allowNull: false
+                primaryKey: true
             },
 
             nombre: {
-                type: DataTypes.STRING(50),
+                type: DataTypes.STRING(100),
                 allowNull: false,
                 unique: true
             },
@@ -40,12 +39,11 @@ module.exports = (sequelize, DataTypes) => {
         },
         {
             sequelize,
-            modelName: 'Role',
-            tableName: 'roles',
-            underscored: true,
-            timestamps: true
+            modelName: 'Categoria',
+            tableName: 'categorias',
+            underscored: true
         }
     );
 
-    return Role;
+    return Categoria;
 };

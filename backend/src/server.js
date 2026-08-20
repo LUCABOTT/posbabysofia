@@ -3,11 +3,27 @@ const cors = require('cors');
 require('dotenv').config();
 
 const sequelize = require('./config/database');
+const authRoutes = require('./routes/auth.routes');
+const categoriaRoutes = require('./routes/categoria.routes');
+const productoRoutes = require('./routes/producto.routes');
+const inventarioRoutes = require('./routes/inventario.routes');
+const clienteRoutes = require('./routes/cliente.routes');
+const ventaRoutes = require('./routes/venta.routes');
+
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+//rutas autenticacion
+
+app.use('/api/auth', authRoutes);
+app.use('/api/categorias', categoriaRoutes);
+app.use('/api/productos', productoRoutes);
+app.use('/api/inventario', inventarioRoutes);
+app.use('/api/clientes', clienteRoutes);
+app.use('/api/ventas', ventaRoutes);
 
 app.get('/api/health', async (req, res) => {
     try {
