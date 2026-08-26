@@ -27,6 +27,11 @@ module.exports = (sequelize, DataTypes) => {
                 foreignKey: 'venta_id',
                 as: 'pagos'
             });
+
+            Venta.hasOne(models.Factura, {
+                foreignKey: 'venta_id',
+                as: 'factura'
+            });
         }
     }
 

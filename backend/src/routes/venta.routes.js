@@ -5,7 +5,8 @@ const router = express.Router();
 const {
     crearVenta,
     listarVentas,
-    obtenerVenta
+    obtenerVenta,
+    anularVenta
 } = require('../controllers/venta.controller');
 
 const authMiddleware = require('../middleware/auth.middleware');
@@ -32,6 +33,11 @@ router.get(
     obtenerVenta
 );
 
+router.put(
+    '/:id/anular',
+    authMiddleware,
+    anularVenta
+);
 
 
 module.exports = router;

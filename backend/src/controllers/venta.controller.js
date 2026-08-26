@@ -1,22 +1,49 @@
+
 const {
     sequelize,
     Venta,
     DetalleVenta,
     Producto,
     Cliente,
-    Pago
+    Pago,
+    MovimientoInventario,
+    Caja,
+    MovimientoCaja,
+    Factura,
+    ConfiguracionFiscal
 } = require('../models');
+
+const { Op } = require('sequelize');
+
+
+// =========================
+// CREAR VENTA
+// =========================
+
 const crearVenta = async (req, res) => {
+
     const transaction = await sequelize.transaction();
 
     try {
-        const { cliente_id, productos, descuento = 0, pago } = req.body;
+
+        const {
+            cliente_id,
+            productos,
+            descuento = 0,
+            pago
+        } = req.body;
+
 
         // =========================
         // 1. VALIDACIONES BÁSICAS
         // =========================
 
-        if (!productos || !Array.isArray(productos) || productos.length === 0) {
+        if (
+            !productos ||
+            !Array.isArray(productos) ||
+            productos.length === 0
+        ) {
+
             await transaction.rollback();
 
             return res.status(400).json({
@@ -24,7 +51,9 @@ const crearVenta = async (req, res) => {
             });
         }
 
-        if (descuento < 0) {
+
+        if (Number(descuento) < 0) {
+
             await transaction.rollback();
 
             return res.status(400).json({
@@ -32,81 +61,116 @@ const crearVenta = async (req, res) => {
             });
         }
 
-        //////////////
+
+        // =========================
+        // 2. CLIENTE
+        // =========================
 
         let cliente = null;
 
-if (cliente_id) {
-    cliente = await Cliente.findByPk(cliente_id, {
-        transaction
-    });
+        if (cliente_id) {
 
-    if (!cliente) {
-        await transaction.rollback();
+            cliente = await Cliente.findByPk(
+                cliente_id,
+                {
+                    transaction
+                }
+            );
 
-        return res.status(404).json({
-            message: `Cliente con ID ${cliente_id} no encontrado`
-        });
-    }
+            if (!cliente) {
 
-    if (!cliente.activo) {
-        await transaction.rollback();
+                await transaction.rollback();
 
-        return res.status(400).json({
-            message: `El cliente "${cliente.nombre}" está inactivo`
-        });
-    }
-}
+                return res.status(404).json({
+                    message:
+                        `Cliente con ID ${cliente_id} no encontrado`
+                });
+            }
+
+
+            if (!cliente.activo) {
+
+                await transaction.rollback();
+
+                return res.status(400).json({
+                    message:
+                        `El cliente "${cliente.nombre}" está inactivo`
+                });
+            }
+        }
 
 
         // =========================
-        // 2. BUSCAR PRODUCTOS
+        // 3. BUSCAR PRODUCTOS
         // =========================
 
         const detalles = [];
 
         for (const item of productos) {
 
-            const { producto_id, cantidad } = item;
+            const {
+                producto_id,
+                cantidad
+            } = item;
 
-            if (!producto_id || !cantidad || cantidad <= 0) {
+
+            if (
+                !producto_id ||
+                !cantidad ||
+                cantidad <= 0
+            ) {
+
                 await transaction.rollback();
 
                 return res.status(400).json({
-                    message: 'Producto o cantidad inválida'
+                    message:
+                        'Producto o cantidad inválida'
                 });
             }
 
-            const producto = await Producto.findByPk(producto_id, {
-                transaction,
-                lock: transaction.LOCK.UPDATE
-            });
+
+            const producto =
+                await Producto.findByPk(
+                    producto_id,
+                    {
+                        transaction,
+                        lock: transaction.LOCK.UPDATE
+                    }
+                );
+
 
             if (!producto) {
+
                 await transaction.rollback();
 
                 return res.status(404).json({
-                    message: `Producto con ID ${producto_id} no encontrado`
+                    message:
+                        `Producto con ID ${producto_id} no encontrado`
                 });
             }
 
+
             // =========================
-            // 3. VALIDAR PRODUCTO ACTIVO
+            // PRODUCTO ACTIVO
             // =========================
 
             if (!producto.activo) {
+
                 await transaction.rollback();
 
                 return res.status(400).json({
-                    message: `El producto "${producto.nombre}" está inactivo`
+                    message:
+                        `El producto "${producto.nombre}" está inactivo`
                 });
             }
 
+
             // =========================
-            // 4. VALIDAR STOCK
+            // STOCK
             // =========================
 
             if (producto.stock < cantidad) {
+
                 await transaction.rollback();
 
                 return res.status(400).json({
@@ -117,214 +181,619 @@ if (cliente_id) {
                 });
             }
 
+
             // =========================
-            // 5. CALCULAR SUBTOTAL
+            // SUBTOTAL
             // =========================
 
-            const precio = Number(producto.precio_venta);
+            const precio =
+                Number(producto.precio_venta);
 
-            const subtotal = precio * cantidad;
+            const subtotalProducto =
+                precio * cantidad;
+
 
             detalles.push({
                 producto,
                 cantidad,
                 precio_unitario: precio,
                 descuento: 0,
-                subtotal
+                subtotal: subtotalProducto
             });
         }
 
+
         // =========================
-        // 6. CALCULAR TOTALES
+        // 4. CALCULAR TOTALES
         // =========================
 
         const subtotal = detalles.reduce(
-            (total, detalle) => total + detalle.subtotal,
+            (total, detalle) =>
+                total + detalle.subtotal,
             0
         );
 
-        if (descuento > subtotal) {
+
+        if (Number(descuento) > subtotal) {
+
             await transaction.rollback();
 
             return res.status(400).json({
-                message: 'El descuento no puede ser mayor que el subtotal'
+                message:
+                    'El descuento no puede ser mayor que el subtotal'
             });
         }
 
-        const baseImponible = subtotal - Number(descuento);
 
-        // Por ahora dejamos impuesto en 0.
-        // Después lo configuraremos para el sistema fiscal.
+        const baseImponible =
+            subtotal - Number(descuento);
+
+
+        // Actualmente el impuesto permanece en 0.
         const impuesto = 0;
 
-        const total = baseImponible + impuesto;
 
-        // =========================
-// VALIDAR PAGO
-// =========================
-
-if (!pago || !pago.metodo || pago.recibido === undefined) {
-    await transaction.rollback();
-
-    return res.status(400).json({
-        message: 'Debe proporcionar los datos del pago'
-    });
-}
-
-const metodosPermitidos = [
-    'EFECTIVO',
-    'TARJETA',
-    'TRANSFERENCIA'
-];
-
-if (!metodosPermitidos.includes(pago.metodo)) {
-    await transaction.rollback();
-
-    return res.status(400).json({
-        message: 'Método de pago inválido'
-    });
-}
-
-const recibido = Number(pago.recibido);
-
-if (isNaN(recibido) || recibido <= 0) {
-    await transaction.rollback();
-
-    return res.status(400).json({
-        message: 'El monto recibido debe ser válido'
-    });
-}
-
-if (pago.metodo === 'EFECTIVO' && recibido < total) {
-    await transaction.rollback();
-
-    return res.status(400).json({
-        message: 'El efectivo recibido es insuficiente',
-        total,
-        recibido
-    });
-}
-
-if (pago.metodo !== 'EFECTIVO' && recibido !== total) {
-    await transaction.rollback();
-
-    return res.status(400).json({
-        message: 'Para este método de pago, el monto debe ser igual al total'
-    });
-}
+        const total =
+            baseImponible + impuesto;
 
 
         // =========================
-        // 7. GENERAR NÚMERO DE VENTA
+        // 5. VALIDAR PAGO
         // =========================
 
-        const numero = `V-${Date.now()}`;
+        if (
+            !pago ||
+            !pago.metodo ||
+            pago.recibido === undefined
+        ) {
 
-        // =========================
-        // 8. CREAR VENTA
-        // =========================
+            await transaction.rollback();
 
-        const venta = await Venta.create(
-            {
-                cliente_id: cliente_id || null,
-                usuario_id: req.user.id,
-                numero,
-                subtotal,
-                descuento: Number(descuento),
-                impuesto,
+            return res.status(400).json({
+                message:
+                    'Debe proporcionar los datos del pago'
+            });
+        }
+
+
+        const metodosPermitidos = [
+            'EFECTIVO',
+            'TARJETA',
+            'TRANSFERENCIA'
+        ];
+
+
+        if (!metodosPermitidos.includes(pago.metodo)) {
+
+            await transaction.rollback();
+
+            return res.status(400).json({
+                message:
+                    'Método de pago inválido'
+            });
+        }
+
+
+        const recibido =
+            Number(pago.recibido);
+
+
+        if (
+            isNaN(recibido) ||
+            recibido <= 0
+        ) {
+
+            await transaction.rollback();
+
+            return res.status(400).json({
+                message:
+                    'El monto recibido debe ser válido'
+            });
+        }
+
+
+        if (
+            pago.metodo === 'EFECTIVO' &&
+            recibido < total
+        ) {
+
+            await transaction.rollback();
+
+            return res.status(400).json({
+                message:
+                    'El efectivo recibido es insuficiente',
                 total,
-                estado: 'COMPLETADA'
-            },
-            { transaction }
-        );
+                recibido
+            });
+        }
+
+
+        if (
+            pago.metodo !== 'EFECTIVO' &&
+            recibido !== total
+        ) {
+
+            await transaction.rollback();
+
+            return res.status(400).json({
+                message:
+                    'Para este método de pago, el monto debe ser igual al total'
+            });
+        }
+
 
         // =========================
-        // 9. CREAR DETALLES
+        // 6. VALIDAR CAJA
+        // =========================
+
+        let caja = null;
+
+
+        if (pago.metodo === 'EFECTIVO') {
+
+            caja = await Caja.findOne({
+
+                where: {
+                    usuario_id: req.user.id,
+                    estado: 'ABIERTA'
+                },
+
+                transaction,
+
+                lock: transaction.LOCK.UPDATE
+
+            });
+
+
+            if (!caja) {
+
+                await transaction.rollback();
+
+                return res.status(400).json({
+                    message:
+                        'No tiene una caja abierta. Debe abrir una caja antes de realizar ventas en efectivo.'
+                });
+            }
+        }
+
+
+        // =========================
+        // 7. CONFIGURACIÓN FISCAL
+        // =========================
+
+        const configuracionFiscal =
+            await ConfiguracionFiscal.findOne({
+
+                where: {
+                    activo: true
+                },
+
+                order: [
+                    ['id', 'DESC']
+                ],
+
+                transaction,
+
+                lock: transaction.LOCK.UPDATE
+
+            });
+
+
+        if (!configuracionFiscal) {
+
+            await transaction.rollback();
+
+            return res.status(400).json({
+                message:
+                    'No existe una configuración fiscal activa'
+            });
+        }
+
+
+        // =========================
+        // 8. VALIDAR FECHA FISCAL
+        // =========================
+
+        const hoy =
+            new Date()
+                .toISOString()
+                .split('T')[0];
+
+
+        if (
+            hoy >
+            configuracionFiscal.fecha_limite_emision
+        ) {
+
+            await transaction.rollback();
+
+            return res.status(400).json({
+                message:
+                    'La fecha límite de emisión de la configuración fiscal ha vencido',
+                fecha_limite_emision:
+                    configuracionFiscal.fecha_limite_emision
+            });
+        }
+
+
+        // =========================
+        // 9. VALIDAR CORRELATIVO
+        // =========================
+
+        const siguienteNumero =
+            Number(
+                configuracionFiscal.siguiente_numero
+            );
+
+
+        const rangoInicial =
+            Number(
+                configuracionFiscal.rango_inicial
+            );
+
+
+        const rangoFinal =
+            Number(
+                configuracionFiscal.rango_final
+            );
+
+
+        if (
+            siguienteNumero < rangoInicial ||
+            siguienteNumero > rangoFinal
+        ) {
+
+            await transaction.rollback();
+
+            return res.status(400).json({
+                message:
+                    'Se ha agotado el rango autorizado de facturación',
+                rango_inicial: rangoInicial,
+                rango_final: rangoFinal,
+                siguiente_numero: siguienteNumero
+            });
+        }
+
+
+        // =========================
+        // 10. GENERAR NÚMERO DE VENTA
+        // =========================
+
+        const numero =
+            `V-${Date.now()}`;
+
+
+        // =========================
+        // 11. CREAR VENTA
+        // =========================
+
+        const venta =
+            await Venta.create({
+
+                cliente_id:
+                    cliente_id || null,
+
+                usuario_id:
+                    req.user.id,
+
+                numero,
+
+                subtotal,
+
+                descuento:
+                    Number(descuento),
+
+                impuesto,
+
+                total,
+
+                estado:
+                    'COMPLETADA'
+
+            }, {
+                transaction
+            });
+
+
+        // =========================
+        // 12. CREAR DETALLES
         // =========================
 
         for (const detalle of detalles) {
 
-            await DetalleVenta.create(
-                {
-                    venta_id: venta.id,
-                    producto_id: detalle.producto.id,
-                    cantidad: detalle.cantidad,
-                    precio_unitario: detalle.precio_unitario,
-                    descuento: detalle.descuento,
-                    subtotal: detalle.subtotal
-                },
-                { transaction }
-            );
+            await DetalleVenta.create({
+
+                venta_id:
+                    venta.id,
+
+                producto_id:
+                    detalle.producto.id,
+
+                cantidad:
+                    detalle.cantidad,
+
+                precio_unitario:
+                    detalle.precio_unitario,
+
+                descuento:
+                    detalle.descuento,
+
+                subtotal:
+                    detalle.subtotal
+
+            }, {
+                transaction
+            });
+
 
             // =========================
-            // 10. DESCONTAR STOCK
+            // DESCONTAR STOCK
             // =========================
 
-            detalle.producto.stock -= detalle.cantidad;
+            const stockAnterior =
+                detalle.producto.stock;
+
+
+            const stockNuevo =
+                stockAnterior -
+                detalle.cantidad;
+
+
+            detalle.producto.stock =
+                stockNuevo;
+
 
             await detalle.producto.save({
+                transaction
+            });
+
+
+            // =========================
+            // MOVIMIENTO INVENTARIO
+            // =========================
+
+            await MovimientoInventario.create({
+
+                producto_id:
+                    detalle.producto.id,
+
+                usuario_id:
+                    req.user.id,
+
+                tipo:
+                    'SALIDA',
+
+                cantidad:
+                    detalle.cantidad,
+
+                stock_anterior:
+                    stockAnterior,
+
+                stock_nuevo:
+                    stockNuevo,
+
+                motivo:
+                    `Salida por venta ${venta.numero}`
+
+            }, {
                 transaction
             });
         }
 
 
         // =========================
-// CREAR PAGO
-// =========================
+        // 13. CREAR PAGO
+        // =========================
 
-const cambio = recibido - total;
+        const cambio =
+            recibido - total;
 
-await Pago.create(
-    {
-        venta_id: venta.id,
-        metodo: pago.metodo,
-        monto: total,
-        referencia: pago.referencia || null
-    },
-    {
-        transaction
-    }
-);
 
+        await Pago.create({
+
+            venta_id:
+                venta.id,
+
+            metodo:
+                pago.metodo,
+
+            monto:
+                total,
+
+            referencia:
+                pago.referencia || null
+
+        }, {
+            transaction
+        });
 
 
         // =========================
-        // 11. CONFIRMAR TRANSACCIÓN
+        // 14. MOVIMIENTO DE CAJA
+        // =========================
+
+        if (pago.metodo === 'EFECTIVO') {
+
+            await MovimientoCaja.create({
+
+                caja_id:
+                    caja.id,
+
+                usuario_id:
+                    req.user.id,
+
+                tipo:
+                    'INGRESO',
+
+                monto:
+                    total,
+
+                motivo:
+                    `Venta ${venta.numero}`
+
+            }, {
+                transaction
+            });
+        }
+
+
+        // =========================
+        // 15. GENERAR NÚMERO DE FACTURA
+        // =========================
+
+        const numeroCorrelativo =
+            siguienteNumero
+                .toString()
+                .padStart(8, '0');
+
+
+        const numeroFactura =
+            `${configuracionFiscal.prefijo_factura}-${numeroCorrelativo}`;
+
+
+        // =========================
+        // 16. CREAR FACTURA
+        // =========================
+
+        const factura =
+            await Factura.create({
+
+                venta_id:
+                    venta.id,
+
+                configuracion_fiscal_id:
+                    configuracionFiscal.id,
+
+                numero_factura:
+                    numeroFactura,
+
+                numero_correlativo:
+                    siguienteNumero,
+
+                cai:
+                    configuracionFiscal.cai,
+
+                rtn_emisor:
+                    configuracionFiscal.rtn,
+
+                fecha_emision:
+                    hoy,
+
+                estado:
+                    'EMITIDA'
+
+            }, {
+                transaction
+            });
+
+
+        // =========================
+        // 17. INCREMENTAR CORRELATIVO
+        // =========================
+
+        configuracionFiscal.siguiente_numero =
+            siguienteNumero + 1;
+
+
+        await configuracionFiscal.save({
+            transaction
+        });
+
+
+        // =========================
+        // 18. CONFIRMAR TRANSACCIÓN
         // =========================
 
         await transaction.commit();
 
+
         // =========================
-        // 12. RESPUESTA
+        // 19. RESPUESTA
         // =========================
 
         return res.status(201).json({
-            message: 'Venta creada correctamente',
+
+            message:
+                'Venta creada correctamente',
+
             venta: {
-                id: venta.id,
-                numero: venta.numero,
-                subtotal: venta.subtotal,
-                descuento: venta.descuento,
-                impuesto: venta.impuesto,
-                total: venta.total,
-                estado: venta.estado
+
+                id:
+                    venta.id,
+
+                numero:
+                    venta.numero,
+
+                subtotal:
+                    venta.subtotal,
+
+                descuento:
+                    venta.descuento,
+
+                impuesto:
+                    venta.impuesto,
+
+                total:
+                    venta.total,
+
+                estado:
+                    venta.estado
             },
+
+
+            factura: {
+
+                id:
+                    factura.id,
+
+                numero_factura:
+                    factura.numero_factura,
+
+                numero_correlativo:
+                    factura.numero_correlativo,
+
+                cai:
+                    factura.cai,
+
+                rtn_emisor:
+                    factura.rtn_emisor,
+
+                fecha_emision:
+                    factura.fecha_emision,
+
+                estado:
+                    factura.estado
+            },
+
+
             pago: {
-                metodo: pago.metodo,
-                monto: total,
+
+                metodo:
+                    pago.metodo,
+
+                monto:
+                    total,
+
                 recibido,
+
                 cambio
             }
         });
+
 
     } catch (error) {
 
         await transaction.rollback();
 
-        console.error('Error al crear venta:', error);
+        console.error(
+            'Error al crear venta:',
+            error
+        );
+
 
         return res.status(500).json({
-            message: 'Error interno del servidor'
+            message:
+                'Error interno del servidor'
         });
     }
 };
@@ -354,6 +823,18 @@ const listarVentas = async (req, res) => {
                                 'precio_venta'
                             ]
                         }
+                    ]
+                },
+                {
+                    association: 'factura',
+                    attributes: [
+                        'id',
+                        'numero_factura',
+                        'numero_correlativo',
+                        'cai',
+                        'rtn_emisor',
+                        'fecha_emision',
+                        'estado'
                     ]
                 }
             ],
@@ -404,6 +885,18 @@ const obtenerVenta = async (req, res) => {
                             ]
                         }
                     ]
+                },
+                {
+                    association: 'factura',
+                    attributes: [
+                        'id',
+                        'numero_factura',
+                        'numero_correlativo',
+                        'cai',
+                        'rtn_emisor',
+                        'fecha_emision',
+                        'estado'
+                    ]
                 }
             ]
         });
@@ -427,8 +920,168 @@ const obtenerVenta = async (req, res) => {
 };
 
 
+const anularVenta = async (req, res) => {
+
+    const transaction = await sequelize.transaction();
+
+    try {
+
+        const { id } = req.params;
+
+        const venta = await Venta.findByPk(id, {
+            transaction,
+            lock: transaction.LOCK.UPDATE
+        });
+
+        if (!venta) {
+
+            await transaction.rollback();
+
+            return res.status(404).json({
+                message: 'Venta no encontrada'
+            });
+        }
+
+        if (venta.estado === 'ANULADA') {
+
+            await transaction.rollback();
+
+            return res.status(400).json({
+                message: 'La venta ya está anulada'
+            });
+        }
+
+        const detalles = await DetalleVenta.findAll({
+            where: {
+                venta_id: venta.id
+            },
+            transaction
+        });
+
+        const pago = await Pago.findOne({
+            where: {
+                venta_id: venta.id
+            },
+            transaction
+        });
+
+        for (const detalle of detalles) {
+
+            const producto = await Producto.findByPk(
+                detalle.producto_id,
+                {
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                }
+            );
+
+            if (!producto) {
+
+                await transaction.rollback();
+
+                return res.status(404).json({
+                    message:
+                        `Producto ${detalle.producto_id} no encontrado`
+                });
+            }
+
+            const stockAnterior = producto.stock;
+
+            const stockNuevo =
+                stockAnterior + detalle.cantidad;
+
+            producto.stock = stockNuevo;
+
+            await producto.save({
+                transaction
+            });
+
+            await MovimientoInventario.create(
+                {
+                    producto_id: producto.id,
+                    usuario_id: req.user.id,
+                    tipo: 'ENTRADA',
+                    cantidad: detalle.cantidad,
+                    stock_anterior: stockAnterior,
+                    stock_nuevo: stockNuevo,
+                    motivo:
+                        `Devolución por anulación de venta ${venta.numero}`
+                },
+                {
+                    transaction
+                }
+            );
+        }
+
+        // ==================================
+        // DEVOLVER DINERO A CAJA
+        // ==================================
+
+        if (pago && pago.metodo === 'EFECTIVO') {
+
+            const caja = await Caja.findOne({
+                where: {
+                    usuario_id: req.user.id,
+                    estado: 'ABIERTA'
+                },
+                transaction,
+                lock: transaction.LOCK.UPDATE
+            });
+
+            if (caja) {
+
+                await MovimientoCaja.create(
+                    {
+                        caja_id: caja.id,
+                        usuario_id: req.user.id,
+                        tipo: 'EGRESO',
+                        monto: pago.monto,
+                        motivo:
+                            `Devolución por anulación de venta ${venta.numero}`
+                    },
+                    {
+                        transaction
+                    }
+                );
+            }
+        }
+
+        venta.estado = 'ANULADA';
+
+        await venta.save({
+            transaction
+        });
+
+        await transaction.commit();
+
+        return res.json({
+            message: 'Venta anulada correctamente',
+            venta: {
+                id: venta.id,
+                numero: venta.numero,
+                estado: venta.estado
+            }
+        });
+
+    } catch (error) {
+
+        await transaction.rollback();
+
+        console.error(
+            'Error al anular venta:',
+            error
+        );
+
+        return res.status(500).json({
+            message: 'Error interno del servidor'
+        });
+    }
+};
+
+
 module.exports = {
     crearVenta,
     listarVentas,
-    obtenerVenta
+    obtenerVenta,
+    anularVenta
 };

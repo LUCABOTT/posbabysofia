@@ -24,7 +24,8 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.ENUM(
                     'ENTRADA',
                     'SALIDA',
-                    'AJUSTE'
+                    'AJUSTE',
+                    'DEVOLUCION'
                 ),
                 allowNull: false
             },
@@ -50,6 +51,8 @@ module.exports = (sequelize, DataTypes) => {
             }
         },
         {
+            sequelize,
+            modelName: 'MovimientoInventario',
             tableName: 'movimientos_inventario',
             timestamps: true,
             createdAt: 'created_at',
