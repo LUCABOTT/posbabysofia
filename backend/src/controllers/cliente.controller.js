@@ -8,6 +8,7 @@ const crearCliente = async (req, res) => {
             nombre,
             email,
             telefono,
+            rtn,
             fecha_nacimiento
         } = req.body;
 
@@ -34,6 +35,7 @@ const crearCliente = async (req, res) => {
             nombre: nombre.trim(),
             email: email || null,
             telefono: telefono || null,
+            rtn: rtn || null,
             fecha_nacimiento: fecha_nacimiento || null
         });
 
@@ -129,6 +131,7 @@ const actualizarCliente = async (req, res) => {
             nombre,
             email,
             telefono,
+            rtn,
             fecha_nacimiento,
             activo
         } = req.body;
@@ -174,6 +177,10 @@ const actualizarCliente = async (req, res) => {
             telefono: telefono !== undefined
                 ? telefono
                 : cliente.telefono,
+
+            rtn: rtn !== undefined
+                ? rtn
+                : cliente.rtn,
 
             fecha_nacimiento: fecha_nacimiento !== undefined
                 ? fecha_nacimiento

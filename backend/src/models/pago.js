@@ -39,6 +39,17 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false
             },
 
+            monto_recibido: {
+                type: DataTypes.DECIMAL(12, 2),
+                allowNull: false
+            },
+
+            cambio: {
+                type: DataTypes.DECIMAL(12, 2),
+                allowNull: false,
+                defaultValue: 0
+            },
+
             referencia: {
                 type: DataTypes.STRING(100),
                 allowNull: true

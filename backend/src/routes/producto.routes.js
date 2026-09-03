@@ -13,7 +13,7 @@ const {
 
 const authMiddleware = require('../middleware/auth.middleware');
 const roleMiddleware = require('../middleware/role.middleware');
-
+const upload = require('../middleware/upload.middleware');
 
 router.get(
     '/',
@@ -29,21 +29,6 @@ router.get(
 );
 
 
-router.post(
-    '/',
-    authMiddleware,
-    roleMiddleware('SUPER_ADMIN', 'ADMIN'),
-    crearProducto
-);
-
-
-router.put(
-    '/:id',
-    authMiddleware,
-    roleMiddleware('SUPER_ADMIN', 'ADMIN'),
-    actualizarProducto
-);
-
 
 router.delete(
     '/definitivo/:id',
@@ -58,6 +43,23 @@ router.delete(
     authMiddleware,
     roleMiddleware('SUPER_ADMIN', 'ADMIN'),
     eliminarProducto
+);
+
+
+router.post(
+    '/',
+    authMiddleware,
+    roleMiddleware('SUPER_ADMIN', 'ADMIN'),
+    upload.single('imagen'),
+    crearProducto
+);
+
+router.put(
+    '/:id',
+    authMiddleware,
+    roleMiddleware('SUPER_ADMIN', 'ADMIN'),
+    upload.single('imagen'),
+    actualizarProducto
 );
 
 

@@ -2,7 +2,12 @@ const express = require('express');
 const router = express.Router();
 
 const {
-    login
+    login,
+    logout,
+    registrarUsuario,
+    listarUsuarios,
+    editarUsuario,
+    cambiarEstadoUsuario
 } = require('../controllers/auth.controller');
 
 const authMiddleware = require('../middleware/auth.middleware');
@@ -10,6 +15,34 @@ const roleMiddleware = require('../middleware/role.middleware');
 
 // Login
 router.post('/login', login);
+router.post('/logout', logout);
+router.post(
+    '/register',
+    authMiddleware,
+    roleMiddleware('SUPER_ADMIN'),
+    registrarUsuario
+);
+
+router.get(
+    '/users',
+    authMiddleware,
+    roleMiddleware('SUPER_ADMIN'),
+    listarUsuarios
+);
+
+router.put(
+    '/users/:id',
+    authMiddleware,
+    roleMiddleware('SUPER_ADMIN'),
+    editarUsuario
+);
+
+router.patch(
+    '/users/:id/estado',
+    authMiddleware,
+    roleMiddleware('SUPER_ADMIN'),
+    cambiarEstadoUsuario
+);
 
 // Usuario autenticado
 router.get('/me', authMiddleware, (req, res) => {

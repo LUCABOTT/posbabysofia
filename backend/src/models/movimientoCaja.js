@@ -18,6 +18,11 @@ module.exports = (sequelize, DataTypes) => {
                 as: 'usuario'
             });
 
+             MovimientoCaja.belongsTo(models.Venta, {
+                foreignKey: 'venta_id',
+                as: 'venta'
+            });
+
         }
 
     }
@@ -38,6 +43,11 @@ module.exports = (sequelize, DataTypes) => {
             usuario_id: {
                 type: DataTypes.BIGINT,
                 allowNull: false
+            },
+
+             venta_id: {
+                type: DataTypes.BIGINT,
+                allowNull: true
             },
 
             tipo: {

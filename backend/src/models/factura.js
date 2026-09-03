@@ -63,6 +63,11 @@ module.exports = (sequelize, DataTypes) => {
         }
     );
 
+
+    // ==============================
+    // ASOCIACIONES
+    // ==============================
+
     Factura.associate = (models) => {
 
         Factura.belongsTo(models.Venta, {
@@ -76,6 +81,7 @@ module.exports = (sequelize, DataTypes) => {
         });
 
     };
+
 
     return Factura;
 };

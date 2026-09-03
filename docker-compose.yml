@@ -40,6 +40,7 @@ services:
 
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      FRONTEND_URL: http://localhost:5173
 
     volumes:
       - ./backend:/app
