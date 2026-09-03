@@ -32,7 +32,12 @@ module.exports = (sequelize, DataTypes) => {
                 foreignKey: 'venta_id',
                 as: 'factura'
             });
-        }
+
+            Venta.hasMany(models.MovimientoCaja, {
+                foreignKey: 'venta_id',
+                as: 'movimientosCaja'
+            });
+                    }
     }
 
     Venta.init(
@@ -52,6 +57,7 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.BIGINT,
                 allowNull: false
             },
+            
 
             numero: {
                 type: DataTypes.STRING(50),

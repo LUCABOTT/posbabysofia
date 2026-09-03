@@ -3,14 +3,21 @@ const jwt = require('jsonwebtoken');
 const authMiddleware = (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
+        const cookies = Object.fromEntries(
+            (req.headers.cookie || '').split(';').filter(Boolean).map((cookie) => {
+                const [name, ...value] = cookie.trim().split('=');
+                return [name, decodeURIComponent(value.join('='))];
+            })
+        );
+        const token = authHeader?.startsWith('Bearer ')
+            ? authHeader.split(' ')[1]
+            : cookies.posbabysofia_token;
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        if (!token) {
             return res.status(401).json({
                 message: 'Token no proporcionado'
             });
         }
-
-        const token = authHeader.split(' ')[1];
 
         const decoded = jwt.verify(
             token,

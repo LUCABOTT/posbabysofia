@@ -29,6 +29,11 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: true
             },
 
+            rtn: {
+                type: DataTypes.STRING(20),
+                allowNull: true
+            },
+
             fecha_nacimiento: {
                 type: DataTypes.DATEONLY,
                 allowNull: true

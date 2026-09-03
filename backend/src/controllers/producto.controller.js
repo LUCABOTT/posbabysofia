@@ -1,5 +1,27 @@
 const { Producto, Categoria } = require('../models');
+const fs = require('fs');
+const path = require('path');
 
+const CARPETA_DESTINO = path.join(__dirname, '..', '..', 'uploads', 'productos');
+
+// Helper para borrar un archivo de imagen de forma segura
+const borrarImagen = (rutaImagen) => {
+    if (!rutaImagen) return;
+
+    const nombreArchivo = path.basename(rutaImagen);
+    const rutaCompleta = path.join(CARPETA_DESTINO, nombreArchivo);
+
+    fs.unlink(rutaCompleta, (error) => {
+        if (error && error.code !== 'ENOENT') {
+            console.error('Error al borrar imagen:', error);
+        }
+    });
+};
+
+
+// ==============================
+// LISTAR PRODUCTOS
+// ==============================
 const listarProductos = async (req, res) => {
     try {
         const productos = await Producto.findAll({
@@ -25,6 +47,9 @@ const listarProductos = async (req, res) => {
 };
 
 
+// ==============================
+// OBTENER PRODUCTO
+// ==============================
 const obtenerProducto = async (req, res) => {
     try {
         const producto = await Producto.findByPk(req.params.id, {
@@ -55,6 +80,9 @@ const obtenerProducto = async (req, res) => {
 };
 
 
+// ==============================
+// CREAR PRODUCTO
+// ==============================
 const crearProducto = async (req, res) => {
     try {
         const {
@@ -74,6 +102,8 @@ const crearProducto = async (req, res) => {
             !nombre ||
             precio_venta === undefined
         ) {
+            if (req.file) borrarImagen(req.file.filename);
+
             return res.status(400).json({
                 message: 'categoria_id, codigo, nombre y precio_venta son obligatorios'
             });
@@ -82,14 +112,16 @@ const crearProducto = async (req, res) => {
         const categoria = await Categoria.findByPk(categoria_id);
 
         if (!categoria) {
+            if (req.file) borrarImagen(req.file.filename);
+
             return res.status(400).json({
                 message: 'La categoría no existe'
             });
         }
 
-
-
         if (!categoria.activo) {
+            if (req.file) borrarImagen(req.file.filename);
+
             return res.status(400).json({
                 message: 'No se puede crear un producto en una categoría inactiva'
             });
@@ -100,6 +132,8 @@ const crearProducto = async (req, res) => {
         });
 
         if (productoExistente) {
+            if (req.file) borrarImagen(req.file.filename);
+
             return res.status(409).json({
                 message: 'Ya existe un producto con ese código'
             });
@@ -113,7 +147,10 @@ const crearProducto = async (req, res) => {
             precio_compra: precio_compra ?? 0,
             precio_venta,
             stock: stock ?? 0,
-            stock_minimo: stock_minimo ?? 0
+            stock_minimo: stock_minimo ?? 0,
+            imagen: req.file
+                ? `/uploads/productos/${req.file.filename}`
+                : null
         });
 
         res.status(201).json({
@@ -122,6 +159,8 @@ const crearProducto = async (req, res) => {
         });
 
     } catch (error) {
+        if (req.file) borrarImagen(req.file.filename);
+
         console.error('Error al crear producto:', error);
 
         res.status(500).json({
@@ -131,11 +170,16 @@ const crearProducto = async (req, res) => {
 };
 
 
+// ==============================
+// ACTUALIZAR PRODUCTO
+// ==============================
 const actualizarProducto = async (req, res) => {
     try {
         const producto = await Producto.findByPk(req.params.id);
 
         if (!producto) {
+            if (req.file) borrarImagen(req.file.filename);
+
             return res.status(404).json({
                 message: 'Producto no encontrado'
             });
@@ -159,14 +203,17 @@ const actualizarProducto = async (req, res) => {
             categoria = await Categoria.findByPk(categoria_id);
 
             if (!categoria) {
+                if (req.file) borrarImagen(req.file.filename);
+
                 return res.status(400).json({
                     message: 'La categoría no existe'
                 });
             }
-
         }
 
         if (categoria_id !== undefined && !categoria.activo) {
+            if (req.file) borrarImagen(req.file.filename);
+
             return res.status(400).json({
                 message: 'No se puede asignar un producto a una categoría inactiva'
             });
@@ -178,11 +225,19 @@ const actualizarProducto = async (req, res) => {
             });
 
             if (existente) {
+                if (req.file) borrarImagen(req.file.filename);
+
                 return res.status(409).json({
                     message: 'Ya existe otro producto con ese código'
                 });
             }
         }
+
+        // Si sube una imagen nueva, borramos la anterior
+        const imagenAnterior = producto.imagen;
+        const nuevaImagen = req.file
+            ? `/uploads/productos/${req.file.filename}`
+            : producto.imagen;
 
         await producto.update({
             categoria_id,
@@ -193,8 +248,13 @@ const actualizarProducto = async (req, res) => {
             precio_venta,
             stock,
             stock_minimo,
-            activo
+            activo,
+            imagen: nuevaImagen
         });
+
+        if (req.file && imagenAnterior) {
+            borrarImagen(imagenAnterior);
+        }
 
         res.json({
             message: 'Producto actualizado correctamente',
@@ -202,6 +262,8 @@ const actualizarProducto = async (req, res) => {
         });
 
     } catch (error) {
+        if (req.file) borrarImagen(req.file.filename);
+
         console.error('Error al actualizar producto:', error);
 
         res.status(500).json({
@@ -211,6 +273,9 @@ const actualizarProducto = async (req, res) => {
 };
 
 
+// ==============================
+// ELIMINAR PRODUCTO (BORRADO LÓGICO)
+// ==============================
 const eliminarProducto = async (req, res) => {
     try {
         const producto = await Producto.findByPk(req.params.id);
@@ -221,7 +286,7 @@ const eliminarProducto = async (req, res) => {
             });
         }
 
-        // No eliminamos físicamente el producto.
+        // No eliminamos físicamente el producto ni su imagen.
         // Lo desactivamos para conservar el historial.
         await producto.update({
             activo: false
@@ -240,6 +305,10 @@ const eliminarProducto = async (req, res) => {
     }
 };
 
+
+// ==============================
+// ELIMINAR PRODUCTO (DEFINITIVO)
+// ==============================
 const eliminarProductoDefinitivo = async (req, res) => {
     try {
         const producto = await Producto.findByPk(req.params.id);
@@ -250,7 +319,13 @@ const eliminarProductoDefinitivo = async (req, res) => {
             });
         }
 
+        const imagenAnterior = producto.imagen;
+
         await producto.destroy();
+
+        if (imagenAnterior) {
+            borrarImagen(imagenAnterior);
+        }
 
         res.json({
             message: 'Producto eliminado definitivamente'

@@ -600,6 +600,12 @@ const crearVenta = async (req, res) => {
             monto:
                 total,
 
+            monto_recibido:
+                recibido,
+
+            cambio:
+                cambio,
+
             referencia:
                 pago.referencia || null
 
@@ -621,6 +627,8 @@ const crearVenta = async (req, res) => {
 
                 usuario_id:
                     req.user.id,
+
+                venta_id: venta.id,
 
                 tipo:
                     'INGRESO',
@@ -928,10 +936,19 @@ const anularVenta = async (req, res) => {
 
         const { id } = req.params;
 
-        const venta = await Venta.findByPk(id, {
-            transaction,
-            lock: transaction.LOCK.UPDATE
-        });
+
+        // =========================
+        // 1. OBTENER VENTA
+        // =========================
+
+        const venta = await Venta.findByPk(
+            id,
+            {
+                transaction,
+                lock: transaction.LOCK.UPDATE
+            }
+        );
+
 
         if (!venta) {
 
@@ -942,6 +959,11 @@ const anularVenta = async (req, res) => {
             });
         }
 
+
+        // =========================
+        // 2. VALIDAR ESTADO
+        // =========================
+
         if (venta.estado === 'ANULADA') {
 
             await transaction.rollback();
@@ -951,29 +973,80 @@ const anularVenta = async (req, res) => {
             });
         }
 
-        const detalles = await DetalleVenta.findAll({
+
+        // =========================
+        // 3. OBTENER FACTURA
+        // =========================
+
+        const factura = await Factura.findOne({
+
             where: {
                 venta_id: venta.id
             },
-            transaction
+
+            transaction,
+
+            lock: transaction.LOCK.UPDATE
+
         });
 
-        const pago = await Pago.findOne({
+
+        // =========================
+        // 4. VALIDAR FACTURA
+        // =========================
+
+        if (!factura) {
+
+            await transaction.rollback();
+
+            return res.status(400).json({
+                message:
+                    'La venta no tiene una factura asociada'
+            });
+        }
+
+
+        if (factura.estado === 'ANULADA') {
+
+            await transaction.rollback();
+
+            return res.status(400).json({
+                message:
+                    'La factura asociada ya está anulada'
+            });
+        }
+
+
+        // =========================
+        // 5. OBTENER DETALLES
+        // =========================
+
+        const detalles = await DetalleVenta.findAll({
+
             where: {
                 venta_id: venta.id
             },
+
             transaction
+
         });
+
+
+        // =========================
+        // 6. DEVOLVER STOCK
+        // =========================
 
         for (const detalle of detalles) {
 
-            const producto = await Producto.findByPk(
-                detalle.producto_id,
-                {
-                    transaction,
-                    lock: transaction.LOCK.UPDATE
-                }
-            );
+            const producto =
+                await Producto.findByPk(
+                    detalle.producto_id,
+                    {
+                        transaction,
+                        lock: transaction.LOCK.UPDATE
+                    }
+                );
+
 
             if (!producto) {
 
@@ -985,83 +1058,214 @@ const anularVenta = async (req, res) => {
                 });
             }
 
-            const stockAnterior = producto.stock;
+
+            const stockAnterior =
+                Number(producto.stock);
+
 
             const stockNuevo =
-                stockAnterior + detalle.cantidad;
+                stockAnterior +
+                Number(detalle.cantidad);
 
-            producto.stock = stockNuevo;
+
+            producto.stock =
+                stockNuevo;
+
 
             await producto.save({
                 transaction
             });
 
-            await MovimientoInventario.create(
-                {
-                    producto_id: producto.id,
-                    usuario_id: req.user.id,
-                    tipo: 'ENTRADA',
-                    cantidad: detalle.cantidad,
-                    stock_anterior: stockAnterior,
-                    stock_nuevo: stockNuevo,
-                    motivo:
-                        `Devolución por anulación de venta ${venta.numero}`
-                },
-                {
-                    transaction
-                }
-            );
-        }
 
-        // ==================================
-        // DEVOLVER DINERO A CAJA
-        // ==================================
+            // =========================
+            // MOVIMIENTO INVENTARIO
+            // =========================
 
-        if (pago && pago.metodo === 'EFECTIVO') {
+            await MovimientoInventario.create({
 
-            const caja = await Caja.findOne({
-                where: {
-                    usuario_id: req.user.id,
-                    estado: 'ABIERTA'
-                },
-                transaction,
-                lock: transaction.LOCK.UPDATE
+                producto_id:
+                    producto.id,
+
+                usuario_id:
+                    req.user.id,
+
+                tipo:
+                    'ENTRADA',
+
+                cantidad:
+                    detalle.cantidad,
+
+                stock_anterior:
+                    stockAnterior,
+
+                stock_nuevo:
+                    stockNuevo,
+
+                motivo:
+                    `Devolución por anulación de venta ${venta.numero}`
+
+            }, {
+                transaction
             });
 
-            if (caja) {
-
-                await MovimientoCaja.create(
-                    {
-                        caja_id: caja.id,
-                        usuario_id: req.user.id,
-                        tipo: 'EGRESO',
-                        monto: pago.monto,
-                        motivo:
-                            `Devolución por anulación de venta ${venta.numero}`
-                    },
-                    {
-                        transaction
-                    }
-                );
-            }
         }
 
-        venta.estado = 'ANULADA';
+
+        // =========================
+        // 7. OBTENER PAGO
+        // =========================
+
+        const pago = await Pago.findOne({
+
+            where: {
+                venta_id: venta.id
+            },
+
+            transaction,
+
+            lock: transaction.LOCK.UPDATE
+
+        });
+
+
+        // =========================
+        // 8. REVERTIR EFECTIVO
+        // =========================
+
+        if (
+            pago &&
+            pago.metodo === 'EFECTIVO'
+        ) {
+
+            const movimientoVenta =
+                await MovimientoCaja.findOne({
+
+                    where: {
+                        venta_id: venta.id,
+                        tipo: 'INGRESO'
+                    },
+
+                    transaction,
+
+                    lock: transaction.LOCK.UPDATE
+
+                });
+
+
+            if (!movimientoVenta) {
+
+                throw new Error(
+                    'No se encontró el movimiento de caja asociado a la venta'
+                );
+            }
+
+
+            await MovimientoCaja.create({
+
+                caja_id:
+                    movimientoVenta.caja_id,
+
+                usuario_id:
+                    req.user.id,
+
+                venta_id:
+                    venta.id,
+
+                tipo:
+                    'EGRESO',
+
+                monto:
+                    Number(pago.monto),
+
+                motivo:
+                    `Reversión por anulación de venta ${venta.numero}`
+
+            }, {
+                transaction
+            });
+
+        }
+
+
+        // =========================
+        // 9. ANULAR FACTURA
+        // =========================
+
+        factura.estado =
+            'ANULADA';
+
+
+        await factura.save({
+            transaction
+        });
+
+
+        // =========================
+        // 10. ANULAR VENTA
+        // =========================
+
+        venta.estado =
+            'ANULADA';
+
 
         await venta.save({
             transaction
         });
 
+
+        // =========================
+        // 11. CONFIRMAR
+        // =========================
+
         await transaction.commit();
 
+
+        // =========================
+        // 12. RESPUESTA
+        // =========================
+
         return res.json({
-            message: 'Venta anulada correctamente',
+
+            message:
+                'Venta y factura anuladas correctamente',
+
             venta: {
-                id: venta.id,
-                numero: venta.numero,
-                estado: venta.estado
-            }
+
+                id:
+                    venta.id,
+
+                numero:
+                    venta.numero,
+
+                estado:
+                    venta.estado
+
+            },
+
+            factura: {
+
+                id:
+                    factura.id,
+
+                numero_factura:
+                    factura.numero_factura,
+
+                estado:
+                    factura.estado
+
+            },
+
+            inventario:
+                'Stock devuelto correctamente',
+
+            caja:
+                pago &&
+                pago.metodo === 'EFECTIVO'
+                    ? 'Efectivo revertido correctamente'
+                    : 'No aplica reversión de efectivo'
+
         });
+
 
     } catch (error) {
 
@@ -1072,10 +1276,16 @@ const anularVenta = async (req, res) => {
             error
         );
 
+
         return res.status(500).json({
-            message: 'Error interno del servidor'
+
+            message:
+                'Error interno del servidor'
+
         });
+
     }
+
 };
 
 

@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+:root {
+  --color-primary: #A1195C;
+  --color-secondary: #FCCBC3;
+  --color-dark: #2D2D2D;
+  --color-white: #FFFFFF;
+
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  color: var(--color-dark);
+  background-color: #f8f8f8;
+}
+
+@theme {
+  --color-baby-primary: #A1195C;
+  --color-baby-secondary: #FCCBC3;
+  --color-baby-dark: #2D2D2D;
+  --color-baby-white: #FFFFFF;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}

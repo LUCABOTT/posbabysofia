@@ -1,8 +1,9 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
-const { sequelize } = require('./models');
+const { sequelize, Sequelize } = require('./models');
 
 const authRoutes = require('./routes/auth.routes');
 const categoriaRoutes = require('./routes/categoria.routes');
@@ -15,10 +16,17 @@ const movimientoCajaRoutes = require('./routes/movimientoCaja.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const reporteRoutes = require('./routes/reporteRoutes');
 const configuracionFiscalRoutes = require('./routes/configuracionFiscal.routes');
+const facturaRoutes = require('./routes/factura.routes');
 
 const app = express();
+const frontendOrigin = process.env.FRONTEND_URL && process.env.FRONTEND_URL !== '*'
+    ? process.env.FRONTEND_URL
+    : 'http://localhost:5173';
 
-app.use(cors());
+app.use(cors({
+    origin: frontendOrigin,
+    credentials: true
+}));
 app.use(express.json());
 
 // ==============================
@@ -28,6 +36,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/categorias', categoriaRoutes);
 app.use('/api/productos', productoRoutes);
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 app.use('/api/inventario', inventarioRoutes);
 app.use('/api/clientes', clienteRoutes);
 app.use('/api/ventas', ventaRoutes);
@@ -36,6 +45,7 @@ app.use('/api/movimientos-caja', movimientoCajaRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reportes', reporteRoutes);
 app.use('/api/configuracion-fiscal', configuracionFiscalRoutes);
+app.use('/api/facturas', facturaRoutes);
 
 // ==============================
 // HEALTH CHECK
@@ -68,6 +78,35 @@ app.get('/api/health', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
+const sincronizarEsquemaMinimo = async () => {
+    const queryInterface = sequelize.getQueryInterface();
+    const clientes = await queryInterface.describeTable('clientes');
+    const pagos = await queryInterface.describeTable('pagos');
+
+    if (!clientes.rtn) {
+        await queryInterface.addColumn('clientes', 'rtn', {
+            type: Sequelize.STRING(20),
+            allowNull: true
+        });
+    }
+
+    if (!pagos.monto_recibido) {
+        await queryInterface.addColumn('pagos', 'monto_recibido', {
+            type: Sequelize.DECIMAL(12, 2),
+            allowNull: false,
+            defaultValue: 0
+        });
+    }
+
+    if (!pagos.cambio) {
+        await queryInterface.addColumn('pagos', 'cambio', {
+            type: Sequelize.DECIMAL(12, 2),
+            allowNull: false,
+            defaultValue: 0
+        });
+    }
+};
+
 const iniciarServidor = async () => {
 
     try {
@@ -75,6 +114,8 @@ const iniciarServidor = async () => {
         await sequelize.authenticate();
 
         console.log('Conexión con PostgreSQL establecida');
+
+        await sincronizarEsquemaMinimo();
 
         await sequelize.sync();
 
