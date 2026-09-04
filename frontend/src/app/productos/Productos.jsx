@@ -62,6 +62,12 @@ const Producto = () => {
   const [stockMinimo, setStockMinimo] =
     useState('')
 
+  const [descuentoTipo, setDescuentoTipo] = useState('')
+  const [descuentoValor, setDescuentoValor] = useState('')
+  const [descuentoInicio, setDescuentoInicio] = useState('')
+  const [descuentoFin, setDescuentoFin] = useState('')
+  const [descuentoActivo, setDescuentoActivo] = useState(true)
+
   const [activo, setActivo] = useState(true)
 
   const [imagen, setImagen] = useState(null)
@@ -236,6 +242,12 @@ const Producto = () => {
     setStock('')
     setStockMinimo('')
 
+    setDescuentoTipo('')
+    setDescuentoValor('')
+    setDescuentoInicio('')
+    setDescuentoFin('')
+    setDescuentoActivo(true)
+
     setActivo(true)
 
     setImagen(null)
@@ -291,6 +303,12 @@ const Producto = () => {
       setStockMinimo(
         producto.stock_minimo ?? 0
       )
+
+      setDescuentoTipo(producto.descuento_tipo || '')
+      setDescuentoValor(producto.descuento_valor ?? '')
+      setDescuentoInicio(producto.descuento_inicio || '')
+      setDescuentoFin(producto.descuento_fin || '')
+      setDescuentoActivo(producto.descuento_activo ?? true)
 
       setActivo(
         producto.activo ?? true
@@ -382,19 +400,31 @@ const Producto = () => {
       return
     }
 
-    if (!codigo.trim()) {
-      setError(
-        'El código del producto es obligatorio'
-      )
-
-      return
-    }
-
     if (!nombre.trim()) {
       setError(
         'El nombre del producto es obligatorio'
       )
 
+      return
+    }
+
+    if (descuentoTipo && (!descuentoValor || Number(descuentoValor) <= 0)) {
+      setError('El valor del descuento debe ser mayor a 0')
+      return
+    }
+
+    if (descuentoTipo === 'PORCENTAJE' && Number(descuentoValor) > 100) {
+      setError('El descuento porcentual no puede ser mayor a 100')
+      return
+    }
+
+    if (descuentoTipo === 'MONTO' && Number(descuentoValor) >= Number(precioVenta)) {
+      setError('El descuento en monto debe ser menor que el precio de venta')
+      return
+    }
+
+    if (descuentoInicio && descuentoFin && descuentoInicio > descuentoFin) {
+      setError('La fecha inicial no puede ser posterior a la fecha final')
       return
     }
 
@@ -432,11 +462,6 @@ const Producto = () => {
       )
 
       formData.append(
-        'codigo',
-        codigo.trim()
-      )
-
-      formData.append(
         'nombre',
         nombre.trim()
       )
@@ -465,6 +490,12 @@ const Producto = () => {
         'stock_minimo',
         stockMinimo || 0
       )
+
+      formData.append('descuento_tipo', descuentoTipo)
+      formData.append('descuento_valor', descuentoValor || 0)
+      formData.append('descuento_inicio', descuentoInicio)
+      formData.append('descuento_fin', descuentoFin)
+      formData.append('descuento_activo', descuentoActivo)
 
       if (imagen) {
         formData.append(
@@ -600,6 +631,12 @@ const Producto = () => {
         'stock_minimo',
         stockMinimo || 0
       )
+
+      formData.append('descuento_tipo', descuentoTipo)
+      formData.append('descuento_valor', descuentoValor || 0)
+      formData.append('descuento_inicio', descuentoInicio)
+      formData.append('descuento_fin', descuentoFin)
+      formData.append('descuento_activo', descuentoActivo)
 
       formData.append(
         'activo',
@@ -1558,20 +1595,15 @@ const Producto = () => {
                 <div>
 
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Código *
+                    Código
                   </label>
 
                   <input
                     type="text"
-                    value={codigo}
-                    onChange={(e) =>
-                      setCodigo(
-                        e.target.value
-                      )
-                    }
-                    maxLength={50}
-                    placeholder="Ej. PROD-001"
-                    className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-baby-primary focus:ring-2 focus:ring-baby-primary/10"
+                    value={codigo || 'Se generará automáticamente'}
+                    readOnly
+                    disabled={modal === 'crear'}
+                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500 outline-none"
                   />
 
                 </div>
@@ -1704,6 +1736,96 @@ const Producto = () => {
                   </div>
 
                 </div>
+
+              </div>
+
+              {/* ==============================
+                  DESCUENTO
+              ============================== */}
+
+              <div>
+
+                <h3 className="mb-3 text-sm font-semibold text-baby-dark">
+                  Descuento / promoción
+                </h3>
+
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                      Tipo de descuento
+                    </label>
+                    <select
+                      value={descuentoTipo}
+                      onChange={(e) => setDescuentoTipo(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-baby-primary focus:ring-2 focus:ring-baby-primary/10"
+                    >
+                      <option value="">Sin descuento</option>
+                      <option value="PORCENTAJE">Porcentaje</option>
+                      <option value="MONTO">Monto fijo</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                      Valor del descuento
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={descuentoValor}
+                      onChange={(e) => setDescuentoValor(e.target.value)}
+                      disabled={!descuentoTipo}
+                      placeholder={descuentoTipo === 'PORCENTAJE' ? '10' : '20.00'}
+                      className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-baby-primary focus:ring-2 focus:ring-baby-primary/10 disabled:bg-gray-50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                      Inicio de promoción
+                    </label>
+                    <input
+                      type="date"
+                      value={descuentoInicio}
+                      onChange={(e) => setDescuentoInicio(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-baby-primary focus:ring-2 focus:ring-baby-primary/10"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                      Fin de promoción
+                    </label>
+                    <input
+                      type="date"
+                      value={descuentoFin}
+                      onChange={(e) => setDescuentoFin(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-baby-primary focus:ring-2 focus:ring-baby-primary/10"
+                    />
+                  </div>
+
+                </div>
+
+                {modal === 'editar' && descuentoTipo && (
+                  <button
+                    type="button"
+                    onClick={() => setDescuentoActivo(!descuentoActivo)}
+                    className={`mt-4 flex w-full items-center justify-between rounded-lg border px-4 py-3 transition ${
+                      descuentoActivo
+                        ? 'border-green-200 bg-green-50'
+                        : 'border-gray-200 bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-sm font-medium text-gray-700">
+                      {descuentoActivo ? 'Descuento activo' : 'Descuento inactivo'}
+                    </span>
+                    <span className={`h-5 w-9 rounded-full p-0.5 ${descuentoActivo ? 'bg-green-500' : 'bg-gray-300'}`}>
+                      <span className={`block h-4 w-4 rounded-full bg-white shadow-sm transition ${descuentoActivo ? 'translate-x-4' : ''}`} />
+                    </span>
+                  </button>
+                )}
 
               </div>
 

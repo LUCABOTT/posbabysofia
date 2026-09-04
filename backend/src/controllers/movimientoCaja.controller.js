@@ -152,6 +152,22 @@ const listarMovimientos = async (req, res) => {
                         'fecha_cierre',
                         'estado'
                     ]
+                },
+                {
+                    association: 'venta',
+                    attributes: ['id', 'numero', 'subtotal', 'descuento', 'total'],
+                    include: [
+                        {
+                            association: 'detalles',
+                            attributes: ['id', 'cantidad', 'precio_unitario', 'descuento', 'subtotal'],
+                            include: [
+                                {
+                                    association: 'producto',
+                                    attributes: ['id', 'codigo', 'nombre']
+                                }
+                            ]
+                        }
+                    ]
                 }
             ],
 
@@ -160,7 +176,20 @@ const listarMovimientos = async (req, res) => {
             ]
         });
 
-        return res.json(movimientos);
+        return res.json(movimientos.map((movimiento) => {
+            const movimientoJson = movimiento.toJSON();
+            const detalles = movimientoJson.venta?.detalles || [];
+
+            return {
+                ...movimientoJson,
+                descuento_productos: Number(
+                    detalles.reduce(
+                        (total, detalle) => total + Number(detalle.descuento || 0) * Number(detalle.cantidad || 0),
+                        0
+                    ).toFixed(2)
+                )
+            };
+        }));
 
     } catch (error) {
 

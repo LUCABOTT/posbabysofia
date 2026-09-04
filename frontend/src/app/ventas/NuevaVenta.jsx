@@ -13,13 +13,11 @@ import {
     CreditCard,
     Banknote,
     Landmark,
-    Percent,
     Receipt,
     AlertCircle,
     CheckCircle2,
     RefreshCw,
     X,
-    CircleDollarSign,
     WalletCards,
 } from 'lucide-react'
 
@@ -69,12 +67,6 @@ const NuevaVenta = () => {
     // =========================================================
 
     const [clienteId, setClienteId] = useState('')
-
-    // =========================================================
-    // DESCUENTO
-    // =========================================================
-
-    const [descuento, setDescuento] = useState('')
 
     // =========================================================
     // PAGO
@@ -362,11 +354,12 @@ const NuevaVenta = () => {
                 nombre: producto.nombre,
                 imagen: producto.imagen,
                 precio_unitario:
-                    Number(producto.precio_venta || 0),
+                    Number(producto.precio_final ?? producto.precio_venta ?? 0),
+                precio_original: Number(producto.precio_venta || 0),
                 cantidad: 1,
                 stock: stockDisponible,
                 subtotal:
-                    Number(producto.precio_venta || 0),
+                    Number(producto.precio_final ?? producto.precio_venta ?? 0),
             },
         ])
 
@@ -494,7 +487,6 @@ const NuevaVenta = () => {
 
         setCarrito([])
         setClienteId('')
-        setDescuento('')
         setRecibido('')
         setReferencia('')
         setError('')
@@ -517,29 +509,18 @@ const NuevaVenta = () => {
 
     }, [carrito])
 
-    // =========================================================
-    // DESCUENTO VALIDADO
-    // =========================================================
+    const descuentoNumerico = 0
 
-    const descuentoNumerico = useMemo(() => {
-
-        const valor =
-            Number(descuento || 0)
-
-        if (valor < 0) {
-            return 0
-        }
-
-        if (valor > subtotal) {
-            return subtotal
-        }
-
-        return valor
-
-    }, [
-        descuento,
-        subtotal,
-    ])
+    const descuentoProductos = useMemo(() => {
+        return carrito.reduce(
+            (total, item) => total + Math.max(
+                0,
+                Number(item.precio_original || item.precio_unitario) -
+                Number(item.precio_unitario)
+            ) * Number(item.cantidad || 0),
+            0
+        )
+    }, [carrito])
 
     // =========================================================
     // IMPUESTO
@@ -1286,8 +1267,13 @@ const NuevaVenta = () => {
 
                                                             <p className="text-base font-bold text-baby-primary">
 
+                                                                {producto.descuento_vigente && (
+                                                                    <span className="mr-2 text-xs text-gray-400 line-through">
+                                                                        {moneda(producto.precio_venta)}
+                                                                    </span>
+                                                                )}
                                                                 {moneda(
-                                                                    producto.precio_venta
+                                                                    producto.precio_final ?? producto.precio_venta
                                                                 )}
 
                                                             </p>
@@ -1692,58 +1678,15 @@ const NuevaVenta = () => {
 
                                     </div>
 
-                                    {/* DESCUENTO */}
-
-                                    <div>
-
-                                        <label className="mb-1.5 flex items-center gap-2 text-sm text-gray-500">
-
-                                            <Percent
-                                                size={15}
-                                            />
-
-                                            Descuento
-
-                                        </label>
-
-                                        <div className="relative">
-
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                                                L
-                                            </span>
-
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max={
-                                                    subtotal
-                                                }
-                                                step="0.01"
-                                                value={
-                                                    descuento
-                                                }
-                                                onChange={(e) =>
-                                                    setDescuento(
-                                                        e.target.value
-                                                    )
-                                                }
-                                                placeholder="0.00"
-                                                className="w-full rounded-lg border border-gray-200 py-2.5 pl-8 pr-3 text-sm outline-none transition focus:border-baby-primary focus:ring-2 focus:ring-baby-primary/10"
-                                            />
-
-                                        </div>
-
-                                    </div>
-
                                     <div className="flex items-center justify-between text-sm">
 
                                         <span className="text-gray-500">
-                                            Descuento aplicado
+                                            Descuentos de productos
                                         </span>
 
                                         <span className="font-medium text-red-500">
                                             - {moneda(
-                                                descuentoNumerico
+                                                descuentoProductos
                                             )}
                                         </span>
 

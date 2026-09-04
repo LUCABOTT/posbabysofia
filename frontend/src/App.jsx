@@ -15,6 +15,7 @@ import Facturas from './app/facturas/Facturas'
 import FacturaDetalle from './app/facturas/FacturaDetalle'
 import Ventas from './app/ventas/Ventas'
 import NuevaVenta from './app/ventas/NuevaVenta'
+import VentaDetalle from './app/ventas/VentaDetalle'
 import Configuracion from './app/configuracion/Configuracion'
 import Usuarios from './app/usuarios/Usuarios'
 
@@ -134,6 +135,11 @@ function App() {
           <Route
             path="/ventas/nueva"
             element={<NuevaVenta />}
+          />
+
+          <Route
+            path="/ventas/:id"
+            element={<VentaDetalle />}
           />
 
           <Route

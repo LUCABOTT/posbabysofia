@@ -4,9 +4,46 @@ const {
     sequelize
 } = require('../models');
 
+const movimientoConVenta = {
+    association: 'movimientos',
+    include: [
+        {
+            association: 'venta',
+            attributes: ['id', 'numero', 'subtotal', 'descuento', 'total'],
+            include: [
+                {
+                    association: 'detalles',
+                    attributes: ['id', 'cantidad', 'precio_unitario', 'descuento', 'subtotal'],
+                    include: [
+                        {
+                            association: 'producto',
+                            attributes: ['id', 'codigo', 'nombre']
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+};
+
+const prepararMovimientos = (movimientos) => movimientos.map((movimiento) => {
+    const movimientoJson = movimiento.toJSON ? movimiento.toJSON() : movimiento;
+    const detalles = movimientoJson.venta?.detalles || [];
+
+    return {
+        ...movimientoJson,
+        descuento_productos: Number(
+            detalles.reduce(
+                (total, detalle) => total + Number(detalle.descuento || 0) * Number(detalle.cantidad || 0),
+                0
+            ).toFixed(2)
+        )
+    };
+});
+
 const construirRespuestaCaja = (caja) => {
     const cajaJson = caja.toJSON();
-    const movimientos = cajaJson.movimientos || [];
+    const movimientos = prepararMovimientos(caja.movimientos || cajaJson.movimientos || []);
 
     let ingresos = 0;
     let egresos = 0;
@@ -34,6 +71,20 @@ const construirRespuestaCaja = (caja) => {
         egresos,
         monto_esperado: montoEsperado
     };
+};
+
+const calcularMontoEsperado = (caja) => {
+    const montoInicial = Number(caja.monto_inicial || 0);
+    const movimientos = caja.movimientos || [];
+
+    return Number(
+        movimientos.reduce(
+            (total, movimiento) => movimiento.tipo === 'INGRESO'
+                ? total + Number(movimiento.monto || 0)
+                : total - Number(movimiento.monto || 0),
+            montoInicial
+        ).toFixed(2)
+    );
 };
 
 
@@ -130,9 +181,7 @@ const obtenerCajaActual = async (req, res) => {
                 estado: 'ABIERTA'
             },
             include: [
-                {
-                    association: 'movimientos'
-                }
+                movimientoConVenta
             ]
         });
 
@@ -164,12 +213,23 @@ const historialCajas = async (req, res) => {
             where: {
                 usuario_id: req.user.id
             },
+            include: [
+                {
+                    association: 'movimientos',
+                    attributes: ['id', 'tipo', 'monto']
+                }
+            ],
             order: [['fecha_apertura', 'DESC']]
         });
 
+        const cajasConEsperado = cajas.map((caja) => ({
+            ...caja.toJSON(),
+            monto_esperado: calcularMontoEsperado(caja)
+        }));
+
         return res.json({
-            total: cajas.length,
-            cajas
+            total: cajasConEsperado.length,
+            cajas: cajasConEsperado
         });
 
     } catch (error) {
@@ -205,9 +265,7 @@ const obtenerCajaPorId = async (req, res) => {
                 usuario_id: req.user.id
             },
             include: [
-                {
-                    association: 'movimientos'
-                }
+                movimientoConVenta
             ],
             order: [
                 [
