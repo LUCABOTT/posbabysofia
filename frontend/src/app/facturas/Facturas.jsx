@@ -25,19 +25,21 @@ const formatearMoneda = (valor) => {
     }).format(Number(valor || 0))
 }
 
-const formatearFecha = (fecha) => {
+const formatearFechaHora = (fecha) => {
     if (!fecha) return '—'
 
-    const fechaLocal = new Date(`${fecha}T00:00:00`)
+    const fechaLocal = new Date(fecha)
 
     if (Number.isNaN(fechaLocal.getTime())) {
         return fecha
     }
 
-    return fechaLocal.toLocaleDateString('es-HN', {
+    return fechaLocal.toLocaleString('es-HN', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
     })
 }
 
@@ -543,8 +545,8 @@ const Facturas = () => {
                                                             className="text-gray-400"
                                                         />
 
-                                                        {formatearFecha(
-                                                            factura.fecha_emision
+                                                        {formatearFechaHora(
+                                                            factura.created_at
                                                         )}
                                                     </div>
                                                 </td>

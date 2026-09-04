@@ -464,6 +464,9 @@ const obtenerFacturaParaImpresion = async (req, res) => {
                 fecha_emision:
                     factura.fecha_emision,
 
+                fecha_hora_emision:
+                    factura.created_at,
+
                 fecha_limite_emision:
                     factura.configuracionFiscal
                         ?.fecha_limite_emision,

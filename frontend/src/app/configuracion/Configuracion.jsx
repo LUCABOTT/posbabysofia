@@ -20,6 +20,7 @@ import {
 import {
     obtenerConfiguracionFiscal,
     crearConfiguracionFiscal,
+    actualizarConfiguracionFiscal,
 } from '../../services/configuracionFiscalService'
 
 // ==============================
@@ -389,8 +390,7 @@ export default function ConfiguracionFiscal() {
 
             setGuardando(true)
 
-            const response =
-                await crearConfiguracionFiscal({
+            const datosConfiguracion = {
 
                     cai:
                         formulario.cai.trim(),
@@ -440,11 +440,20 @@ export default function ConfiguracionFiscal() {
 
                     activo:
                         formulario.activo,
-                })
+                }
+
+            const response = configuracion
+                ? await actualizarConfiguracionFiscal(
+                    configuracion.id,
+                    datosConfiguracion
+                )
+                : await crearConfiguracionFiscal(datosConfiguracion)
 
             setMensaje(
                 response?.message ||
-                'Configuración fiscal creada correctamente.'
+                configuracion
+                    ? 'Configuración fiscal actualizada correctamente.'
+                    : 'Configuración fiscal creada correctamente.'
             )
 
             setModalAbierto(false)

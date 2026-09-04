@@ -73,6 +73,28 @@ const FacturaDetalle = () => {
 
     }
 
+    const formatearFechaHora = (fecha) => {
+
+        if (!fecha) {
+            return '-'
+        }
+
+        const fechaObj = new Date(fecha)
+
+        if (Number.isNaN(fechaObj.getTime())) {
+            return '-'
+        }
+
+        return new Intl.DateTimeFormat('es-HN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(fechaObj)
+
+    }
+
     // =========================================================
     // CARGAR FACTURA
     // =========================================================
@@ -542,12 +564,12 @@ const FacturaDetalle = () => {
                                     <p>
 
                                         <span className="font-semibold">
-                                            Fecha de emisión:
+                                            Fecha y hora de emisión:
                                         </span>{' '}
 
                                         {
-                                            formatearFecha(
-                                                datosFactura.fecha_emision
+                                            formatearFechaHora(
+                                                datosFactura.fecha_hora_emision
                                             )
                                         }
 
@@ -716,7 +738,7 @@ const FacturaDetalle = () => {
 
                                     <span className="font-medium text-gray-700">
                                         {
-                                            formatearFecha(
+                                            formatearFechaHora(
                                                 venta.fecha
                                             )
                                         }
