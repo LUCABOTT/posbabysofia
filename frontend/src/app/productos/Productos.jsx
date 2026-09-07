@@ -26,6 +26,21 @@ import {
 
 import { obtenerCategorias } from '../../services/categoriaService'
 
+const API_ORIGEN = (
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:3000/api'
+).replace(/\/api\/?$/, '')
+
+const obtenerUrlImagen = (imagen) => {
+  if (!imagen) return null
+
+  if (/^(https?:|blob:|data:)/i.test(imagen)) {
+    return imagen
+  }
+
+  return `${API_ORIGEN}${imagen.startsWith('/') ? imagen : `/${imagen}`}`
+}
+
 const Producto = () => {
   // ==============================
   // ESTADOS
@@ -1207,7 +1222,9 @@ const Producto = () => {
 
                               <img
                                 src={
-                                  producto.imagen
+                                  obtenerUrlImagen(
+                                    producto.imagen
+                                  )
                                 }
                                 alt={
                                   producto.nombre
@@ -1493,7 +1510,9 @@ const Producto = () => {
 
                       <img
                         src={
-                          imagenPreview
+                          obtenerUrlImagen(
+                            imagenPreview
+                          )
                         }
                         alt="Vista previa"
                         className="h-full w-full object-cover"

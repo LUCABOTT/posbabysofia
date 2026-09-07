@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 
 import { obtenerFacturaParaImpresion } from '../../services/facturaService'
+import { montoALetras } from '../../utils/numeroALetras'
 
 const FacturaDetalle = () => {
 
@@ -334,6 +335,13 @@ const FacturaDetalle = () => {
         Array.isArray(venta.productos)
             ? venta.productos
             : []
+
+    const descuentoProductos = productos.reduce(
+        (total, producto) => total + Number(producto.descuento || 0) * Number(producto.cantidad || 0),
+        0
+    )
+
+    const descuentoTotal = descuentoProductos + Number(venta.descuento || 0)
 
     // =========================================================
     // RENDER
@@ -1096,7 +1104,7 @@ const FacturaDetalle = () => {
 
                                     <span className="font-medium text-red-500">
                                         - {moneda(
-                                            venta.descuento
+                                            descuentoTotal
                                         )}
                                     </span>
 
@@ -1105,13 +1113,25 @@ const FacturaDetalle = () => {
                                 <div className="mt-3 flex items-center justify-between text-sm">
 
                                     <span className="text-gray-500">
-                                        Impuesto
+                                        Imp. gravado 15%
                                     </span>
 
                                     <span className="font-medium text-gray-700">
                                         {moneda(
-                                            venta.impuesto
+                                            venta.base_gravada ?? Number(venta.total || 0) - Number(venta.impuesto || 0)
                                         )}
+                                    </span>
+
+                                </div>
+
+                                <div className="mt-3 flex items-center justify-between text-sm">
+
+                                    <span className="text-gray-500">
+                                        I.S.V. 15%
+                                    </span>
+
+                                    <span className="font-medium text-gray-700">
+                                        {moneda(venta.impuesto)}
                                     </span>
 
                                 </div>
@@ -1131,6 +1151,10 @@ const FacturaDetalle = () => {
                                         </span>
 
                                     </div>
+
+                                    <p className="mt-3 text-right text-xs font-medium uppercase text-gray-500">
+                                        {montoALetras(venta.total)}
+                                    </p>
 
                                 </div>
 

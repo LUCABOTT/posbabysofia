@@ -52,6 +52,10 @@ export default function VentaDetalle() {
     }
 
     const pago = venta.pagos?.[0]
+    const descuentoProductos = (venta.detalles || []).reduce(
+        (total, detalle) => total + Number(detalle.descuento || 0) * Number(detalle.cantidad || 0),
+        0
+    )
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -84,7 +88,7 @@ export default function VentaDetalle() {
 
                 <div className="ml-auto max-w-sm rounded-xl bg-white p-5 shadow-sm">
                     <div className="flex justify-between text-sm text-gray-500"><span>Subtotal</span><span>{moneda(venta.subtotal)}</span></div>
-                    <div className="mt-3 flex justify-between text-sm text-gray-500"><span>Descuento</span><span className="text-red-500">- {moneda(venta.descuento)}</span></div>
+                    <div className="mt-3 flex justify-between text-sm text-gray-500"><span>Descuento</span><span className="text-red-500">- {moneda(descuentoProductos + Number(venta.descuento || 0))}</span></div>
                     <div className="mt-3 flex justify-between border-t border-gray-100 pt-3 text-lg font-bold text-baby-dark"><span>Total</span><span className="text-baby-primary">{moneda(venta.total)}</span></div>
                     {pago && <p className="mt-3 text-xs text-gray-500">Pago: {pago.metodo} por {moneda(pago.monto)}</p>}
                 </div>

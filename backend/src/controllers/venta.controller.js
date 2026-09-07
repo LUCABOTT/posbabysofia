@@ -228,13 +228,16 @@ const crearVenta = async (req, res) => {
         }
 
 
-        const baseImponible =
+        const totalConDescuento =
             subtotal - Number(descuento);
 
+        const impuesto = Number(
+            (totalConDescuento * 0.15).toFixed(2)
+        );
 
-        // Actualmente el impuesto permanece en 0.
-        const impuesto = 0;
-
+        const baseImponible = Number(
+            (totalConDescuento - impuesto).toFixed(2)
+        );
 
         const total =
             baseImponible + impuesto;
@@ -756,6 +759,9 @@ const crearVenta = async (req, res) => {
 
                 impuesto:
                     venta.impuesto,
+
+                base_gravada:
+                    baseImponible,
 
                 total:
                     venta.total,

@@ -26,6 +26,21 @@ import { obtenerClientes } from '../../services/clientesService'
 import { crearVenta } from '../../services/ventaService'
 import { obtenerCajaActual } from '../../services/cajaService'
 
+const API_ORIGEN = (
+    import.meta.env.VITE_API_URL ||
+    'http://localhost:3000/api'
+).replace(/\/api\/?$/, '')
+
+const obtenerUrlImagen = (imagen) => {
+    if (!imagen) return null
+
+    if (/^(https?:|blob:|data:)/i.test(imagen)) {
+        return imagen
+    }
+
+    return `${API_ORIGEN}${imagen.startsWith('/') ? imagen : `/${imagen}`}`
+}
+
 const NuevaVenta = () => {
 
     const navigate = useNavigate()
@@ -523,23 +538,12 @@ const NuevaVenta = () => {
     }, [carrito])
 
     // =========================================================
-    // IMPUESTO
-    // =========================================================
-
-    const impuesto = 0
-
-    // =========================================================
     // TOTAL
     // =========================================================
 
     const total = useMemo(() => {
 
-        return Math.max(
-            0,
-            subtotal -
-            descuentoNumerico +
-            impuesto
-        )
+        return Math.max(0, subtotal - descuentoNumerico)
 
     }, [
         subtotal,
@@ -1209,7 +1213,9 @@ const NuevaVenta = () => {
 
                                                         <img
                                                             src={
-                                                                producto.imagen
+                                                                obtenerUrlImagen(
+                                                                    producto.imagen
+                                                                )
                                                             }
                                                             alt={
                                                                 producto.nombre
@@ -1524,7 +1530,9 @@ const NuevaVenta = () => {
 
                                                                 <img
                                                                     src={
-                                                                        item.imagen
+                                                                        obtenerUrlImagen(
+                                                                            item.imagen
+                                                                        )
                                                                     }
                                                                     alt={
                                                                         item.nombre

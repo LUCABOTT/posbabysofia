@@ -573,6 +573,13 @@ const obtenerFacturaParaImpresion = async (req, res) => {
                 impuesto:
                     factura.venta.impuesto,
 
+                base_gravada:
+                    Number(factura.venta.total) -
+                    Number(factura.venta.impuesto),
+
+                isv_porcentaje:
+                    15,
+
                 total:
                     factura.venta.total
 
