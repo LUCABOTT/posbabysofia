@@ -17,6 +17,9 @@ const dashboardRoutes = require('./routes/dashboard.routes');
 const reporteRoutes = require('./routes/reporteRoutes');
 const configuracionFiscalRoutes = require('./routes/configuracionFiscal.routes');
 const facturaRoutes = require('./routes/factura.routes');
+const iniciarCumpleanosJob = require('./jobs/cumpleanos.job');
+const cumpleanosRoutes = require('./routes/cumpleanos.routes');
+
 
 const app = express();
 const frontendOrigin = process.env.FRONTEND_URL && process.env.FRONTEND_URL !== '*'
@@ -46,6 +49,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reportes', reporteRoutes);
 app.use('/api/configuracion-fiscal', configuracionFiscalRoutes);
 app.use('/api/facturas', facturaRoutes);
+app.use('/api/cumpleanos', cumpleanosRoutes);
+iniciarCumpleanosJob();
 
 // ==============================
 // HEALTH CHECK

@@ -18,6 +18,7 @@ import NuevaVenta from './app/ventas/NuevaVenta'
 import VentaDetalle from './app/ventas/VentaDetalle'
 import Configuracion from './app/configuracion/Configuracion'
 import Usuarios from './app/usuarios/Usuarios'
+import CumpleanosCorreo from './app/cumpleanos/CumpleanosCorreo'
 
 
 function Placeholder({ titulo }) {
@@ -175,6 +176,11 @@ function App() {
           <Route
             path="/usuarios"
             element={<Usuarios />}
+          />
+
+          <Route
+            path="/cumpleanos/:id/correo"
+            element={<CumpleanosCorreo />}
           />
 
         </Route>

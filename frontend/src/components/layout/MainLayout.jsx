@@ -16,13 +16,13 @@ function MainLayout() {
         cerrar={() => setMenuAbierto(false)}
       />
 
-      <div className="lg:pl-64">
+      <div className="lg:pl-64 print:pl-0">
 
         <Header
           abrirMenu={() => setMenuAbierto(true)}
         />
 
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="p-4 sm:p-6 lg:p-8 print:p-0">
 
           <Outlet />
 

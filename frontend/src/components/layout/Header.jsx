@@ -1,13 +1,20 @@
 import {
   Menu,
   Bell,
-  UserCircle
+  UserCircle,
+  Cake,
+  Mail
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 
 function Header({ abrirMenu }) {
   const [usuario, setUsuario] = useState(null)
+  const [cumpleanos, setCumpleanos] = useState([])
+  const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false)
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     const cargarUsuario = async () => {
@@ -22,15 +29,54 @@ function Header({ abrirMenu }) {
     cargarUsuario()
   }, [])
 
-  return (
-    <header className="
-      sticky top-0 z-30
-      flex h-20 items-center justify-between
-      border-b border-gray-200
-      bg-white/95 backdrop-blur
-      px-4 sm:px-6
-    ">
+  useEffect(() => {
+    const cargarCumpleanos = async () => {
+      try {
+        const response = await api.get('/cumpleanos')
 
+        setCumpleanos(response.data)
+      } catch (error) {
+        console.error(
+          'Error al cargar notificaciones de cumpleaños:',
+          error
+        )
+      }
+    }
+
+    cargarCumpleanos()
+  }, [])
+
+  const abrirCumpleanos = (id) => {
+    setMostrarNotificaciones(false)
+
+    navigate(`/cumpleanos/${id}/correo`)
+  }
+
+  const formatearFecha = (fecha) => {
+    if (!fecha) return ''
+
+    const fechaObj = new Date(`${fecha}T00:00:00`)
+
+    return fechaObj.toLocaleDateString('es-HN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
+  }
+
+  return (
+    <header
+      className="
+        sticky top-0 z-30
+        flex h-20 items-center justify-between
+        border-b border-gray-200
+        bg-white/95 backdrop-blur
+        px-4 sm:px-6
+        print:hidden
+      "
+    >
+
+      {/* MENU MOBILE */}
       <button
         onClick={abrirMenu}
         className="
@@ -45,6 +91,7 @@ function Header({ abrirMenu }) {
       </button>
 
 
+      {/* TITULO */}
       <div className="hidden lg:block">
         <p className="text-sm text-gray-500">
           Bienvenido al sistema
@@ -56,33 +103,241 @@ function Header({ abrirMenu }) {
       </div>
 
 
+      {/* ACCIONES */}
       <div className="ml-auto flex items-center gap-3">
 
-        <button
+        {/* NOTIFICACIONES */}
+        <div className="relative">
+
+          <button
+            onClick={() =>
+              setMostrarNotificaciones(
+                !mostrarNotificaciones
+              )
+            }
+            className="
+              relative rounded-xl p-2.5
+              text-gray-600
+              hover:bg-baby-secondary/40
+              hover:text-baby-primary
+            "
+          >
+            <Bell size={21} />
+
+            {cumpleanos.length > 0 && (
+              <span
+                className="
+                  absolute -right-1 -top-1
+                  flex h-5 min-w-5
+                  items-center justify-center
+                  rounded-full
+                  bg-red-500
+                  px-1
+                  text-[10px]
+                  font-bold
+                  text-white
+                "
+              >
+                {cumpleanos.length > 99
+                  ? '99+'
+                  : cumpleanos.length}
+              </span>
+            )}
+          </button>
+
+
+          {/* PANEL DE NOTIFICACIONES */}
+          {mostrarNotificaciones && (
+            <div
+              className="
+                absolute right-0 top-14
+                z-50
+                w-96
+                overflow-hidden
+                rounded-2xl
+                border border-gray-200
+                bg-white
+                shadow-xl
+              "
+            >
+
+              {/* CABECERA */}
+              <div
+                className="
+                  flex items-center justify-between
+                  border-b border-gray-100
+                  px-4 py-3
+                "
+              >
+                <div>
+                  <h3
+                    className="
+                      text-sm font-semibold
+                      text-baby-dark
+                    "
+                  >
+                    Notificaciones
+                  </h3>
+
+                  <p className="text-xs text-gray-500">
+                    Cumpleaños próximos
+                  </p>
+                </div>
+
+                <div
+                  className="
+                    flex h-9 w-9
+                    items-center justify-center
+                    rounded-xl
+                    bg-baby-secondary/40
+                    text-baby-primary
+                  "
+                >
+                  <Cake size={19} />
+                </div>
+              </div>
+
+
+              {/* CONTENIDO */}
+              <div className="max-h-96 overflow-y-auto">
+
+                {cumpleanos.length === 0 ? (
+
+                  <div className="px-4 py-8 text-center">
+
+                    <Cake
+                      size={35}
+                      className="
+                        mx-auto mb-2
+                        text-gray-300
+                      "
+                    />
+
+                    <p className="text-sm text-gray-500">
+                      No hay cumpleaños próximos
+                    </p>
+
+                  </div>
+
+                ) : (
+
+                  <div>
+                    {cumpleanos.map((notificacion) => (
+
+                      <div
+                        key={notificacion.id}
+                        className="
+                          border-b border-gray-100
+                          px-4 py-4
+                          transition
+                          hover:bg-gray-50
+                        "
+                      >
+
+                        <div className="flex gap-3">
+
+                          <div
+                            className="
+                              flex h-10 w-10 shrink-0
+                              items-center justify-center
+                              rounded-xl
+                              bg-baby-secondary/40
+                              text-baby-primary
+                            "
+                          >
+                            <Cake size={20} />
+                          </div>
+
+
+                          <div className="min-w-0 flex-1">
+
+                            <p
+                              className="
+                                text-sm font-semibold
+                                text-baby-dark
+                              "
+                            >
+                              Cumpleaños próximo
+                            </p>
+
+                            <p
+                              className="
+                                mt-0.5
+                                text-sm
+                                text-gray-600
+                              "
+                            >
+                              {notificacion.cliente?.nombre}
+                            </p>
+
+                            <p
+                              className="
+                                mt-1
+                                text-xs
+                                text-gray-500
+                              "
+                            >
+                              Cumpleaños:{' '}
+                              {formatearFecha(
+                                notificacion.fecha_cumpleanos
+                              )}
+                            </p>
+
+
+                            {/* BOTON CORREO */}
+                            <button
+                              onClick={() =>
+                                abrirCumpleanos(
+                                  notificacion.id
+                                )
+                              }
+                              className="
+                                mt-3
+                                inline-flex
+                                items-center
+                                gap-2
+                                rounded-xl
+                                bg-baby-primary
+                                px-3 py-2
+                                text-xs
+                                font-semibold
+                                text-white
+                                transition
+                                hover:opacity-90
+                              "
+                            >
+                              <Mail size={15} />
+
+                              Enviar correo
+                            </button>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                    ))}
+                  </div>
+
+                )}
+
+              </div>
+
+            </div>
+          )}
+
+        </div>
+
+
+        {/* USUARIO */}
+        <div
           className="
-            relative rounded-xl p-2.5
-            text-gray-600
-            hover:bg-baby-secondary/40
-            hover:text-baby-primary
+            flex items-center gap-3
+            border-l border-gray-200
+            pl-3
           "
         >
-
-          <Bell size={21} />
-
-          <span className="
-            absolute right-1 top-1
-            h-2 w-2 rounded-full
-            bg-baby-primary
-          " />
-
-        </button>
-
-
-        <div className="
-          flex items-center gap-3
-          border-l border-gray-200
-          pl-3
-        ">
 
           <UserCircle
             size={36}
@@ -91,7 +346,12 @@ function Header({ abrirMenu }) {
 
           <div className="hidden sm:block">
 
-            <p className="text-sm font-semibold text-baby-dark">
+            <p
+              className="
+                text-sm font-semibold
+                text-baby-dark
+              "
+            >
               {usuario?.nombre || 'Usuario'}
             </p>
 

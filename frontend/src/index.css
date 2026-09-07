@@ -41,3 +41,141 @@ select,
 textarea {
   font: inherit;
 }
+
+@page {
+  size: letter;
+  margin: 0.5in;
+}
+
+@media print {
+  html,
+  body {
+    width: auto;
+    min-width: 0;
+    background: #ffffff;
+  }
+
+  body {
+    margin: 0;
+    color: #2d2d2d;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  #factura {
+    width: 100%;
+    max-width: none;
+    overflow: visible;
+    border-radius: 0;
+    box-shadow: none;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  #factura .p-6,
+  #factura .md\:p-6,
+  #factura .p-8,
+  #factura .md\:p-8 {
+    padding: 7px !important;
+  }
+
+  #factura .gap-6 {
+    gap: 7px !important;
+  }
+
+  #factura .mb-4 {
+    margin-bottom: 4px !important;
+  }
+
+  #factura .py-4 {
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+
+  #factura .text-2xl {
+    font-size: 1.25rem !important;
+    line-height: 1.5rem !important;
+  }
+
+  #factura .text-xl {
+    font-size: 1.1rem !important;
+    line-height: 1.35rem !important;
+  }
+
+  #factura .text-lg {
+    font-size: 1rem !important;
+    line-height: 1.25rem !important;
+  }
+
+  #factura .text-base {
+    font-size: 0.9rem !important;
+    line-height: 1.15rem !important;
+  }
+
+  #factura .text-sm {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+  }
+
+  #factura .text-xs {
+    font-size: 0.65rem !important;
+    line-height: 0.85rem !important;
+  }
+
+  #factura .p-5,
+  #factura .px-6,
+  #factura .py-5,
+  #factura .px-5,
+  #factura .py-4,
+  #factura .p-4 {
+    padding: 5px !important;
+  }
+
+  #factura .mt-4,
+  #factura .mt-3,
+  #factura .mt-2,
+  #factura .mt-1,
+  #factura .mb-3,
+  #factura .mb-2,
+  #factura .mb-1 {
+    margin-top: 3px !important;
+    margin-bottom: 3px !important;
+  }
+
+  #factura .space-y-3 > :not([hidden]) ~ :not([hidden]),
+  #factura .space-y-1\.5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 3px !important;
+  }
+
+  #factura th,
+  #factura td {
+    padding-top: 3px !important;
+    padding-bottom: 3px !important;
+  }
+
+  #factura h1,
+  #factura h2,
+  #factura h3,
+  #factura p {
+    margin-top: 2px;
+    margin-bottom: 2px;
+  }
+
+  #factura table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  #factura tr,
+  #factura .rounded-lg,
+  #factura .rounded-xl {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  #factura th,
+  #factura td {
+    overflow-wrap: anywhere;
+  }
+}

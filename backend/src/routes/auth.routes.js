@@ -12,9 +12,10 @@ const {
 
 const authMiddleware = require('../middleware/auth.middleware');
 const roleMiddleware = require('../middleware/role.middleware');
+const loginRateLimit = require('../middleware/loginRateLimit');
 
 // Login
-router.post('/login', login);
+router.post('/login', loginRateLimit, login);
 router.post('/logout', logout);
 router.post(
     '/register',

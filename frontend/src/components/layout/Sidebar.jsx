@@ -104,6 +104,7 @@ function Sidebar({ abierto, cerrar }) {
           bg-white border-r border-gray-200
           transition-transform duration-300
           lg:translate-x-0
+          print:hidden
           ${abierto ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
