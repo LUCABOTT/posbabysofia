@@ -37,6 +37,7 @@ const formularioEditarInicial = {
     id: null,
     nombre: '',
     email: '',
+    password: '',
     rol_id: '3'
 }
 
@@ -76,6 +77,7 @@ function Usuarios() {
     )
 
     const [guardandoEdicion, setGuardandoEdicion] = useState(false)
+    const [mostrarPasswordEdicion, setMostrarPasswordEdicion] = useState(false)
 
     // =========================================================
     // CAMBIO DE ESTADO
@@ -207,6 +209,7 @@ function Usuarios() {
             id: usuario.id,
             nombre: usuario.nombre || '',
             email: usuario.email || '',
+            password: '',
             rol_id: String(
                 usuario.rol_id ||
                 usuario.rol?.id ||
@@ -234,6 +237,7 @@ function Usuarios() {
         setModalEditar(false)
 
         setFormularioEditar(formularioEditarInicial)
+        setMostrarPasswordEdicion(false)
 
     }
 
@@ -280,6 +284,10 @@ function Usuarios() {
                 rol_id: Number(formularioEditar.rol_id)
             }
 
+            if (formularioEditar.password.trim()) {
+                datos.password = formularioEditar.password
+            }
+
             const response = await editarUsuarioService(
                 formularioEditar.id,
                 datos
@@ -293,6 +301,7 @@ function Usuarios() {
             setModalEditar(false)
 
             setFormularioEditar(formularioEditarInicial)
+            setMostrarPasswordEdicion(false)
 
             await cargarUsuarios()
 
@@ -1158,14 +1167,40 @@ function Usuarios() {
                             </label>
 
 
-                            {/* INFORMACIÓN */}
+                            {/* CONTRASEÑA OPCIONAL */}
 
-                            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                            <label className="block text-sm font-medium text-gray-700">
 
-                                La contraseña del usuario no se modifica
-                                desde este formulario.
+                                Nueva contraseña
 
-                            </div>
+                                <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2.5 focus-within:border-baby-primary">
+
+                                    <input
+                                        name="password"
+                                        type={mostrarPasswordEdicion ? 'text' : 'password'}
+                                        value={formularioEditar.password}
+                                        onChange={cambiarCampoEditar}
+                                        minLength={6}
+                                        placeholder="Déjala vacía para conservarla"
+                                        className="w-full bg-transparent outline-none"
+                                    />
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setMostrarPasswordEdicion((actual) => !actual)}
+                                        className="text-gray-400 hover:text-baby-primary"
+                                        aria-label={mostrarPasswordEdicion ? 'Ocultar nueva contraseña' : 'Mostrar nueva contraseña'}
+                                    >
+                                        {mostrarPasswordEdicion ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+
+                                </div>
+
+                                <span className="mt-1 block text-xs font-normal text-gray-500">
+                                    Opcional. Debe tener al menos 6 caracteres.
+                                </span>
+
+                            </label>
 
 
                             {/* BOTONES */}

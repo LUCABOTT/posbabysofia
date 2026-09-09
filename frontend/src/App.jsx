@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { Code2, Eye, EyeOff, LockKeyhole, Mail, Store } from 'lucide-react'
 import MainLayout from './components/layout/MainLayout'
 import { ConfirmProvider } from './components/ui/confirmContext'
+import { AuthProvider, useAuth } from './auth/AuthContext'
+import ProtectedRoute from './auth/ProtectedRoute'
 import api from './services/api'
 
 import Dashboard from './app/dashboard/Dashboard'
@@ -40,6 +42,7 @@ function Placeholder({ titulo }) {
 }
 
 function Login() {
+  const { iniciarSesion: guardarSesion } = useAuth()
   const navigate = useNavigate()
   const [formulario, setFormulario] = useState({ email: '', password: '' })
   const [mostrarPassword, setMostrarPassword] = useState(false)
@@ -55,7 +58,8 @@ function Login() {
     setCargando(true)
     setError('')
     try {
-      await api.post('/auth/login', formulario)
+      const response = await api.post('/auth/login', formulario)
+      guardarSesion(response.data.user)
       navigate('/dashboard', { replace: true })
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'No se pudo iniciar sesión.')
@@ -95,7 +99,8 @@ function App() {
 
   return (
     <ConfirmProvider>
-      <BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
 
       <Routes>
 
@@ -110,7 +115,7 @@ function App() {
         />
 
 
-        <Route element={<MainLayout />}>
+        <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
 
           <Route
             path="/dashboard"
@@ -196,7 +201,8 @@ function App() {
 
       </Routes>
 
-      </BrowserRouter>
+        </BrowserRouter>
+      </AuthProvider>
     </ConfirmProvider>
   )
 }

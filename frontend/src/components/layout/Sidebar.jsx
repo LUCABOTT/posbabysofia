@@ -17,6 +17,7 @@ import {
 import { NavLink } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
+import { puedeAccederRuta, useAuth } from '../../auth/AuthContext'
 
 const menuItems = [
   {
@@ -78,11 +79,13 @@ const menuItems = [
 
 function Sidebar({ abierto, cerrar }) {
   const navigate = useNavigate()
+  const { usuario, cerrarSesion: limpiarSesion } = useAuth()
 
   const cerrarSesion = async () => {
     try {
       await api.post('/auth/logout')
     } finally {
+      limpiarSesion()
       cerrar()
       navigate('/login', { replace: true })
     }
@@ -137,7 +140,7 @@ function Sidebar({ abierto, cerrar }) {
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-4">
 
-          {menuItems.map((item) => {
+          {menuItems.filter((item) => puedeAccederRuta(usuario?.rol, item.path)).map((item) => {
 
             const Icon = item.icon
 

@@ -16,6 +16,9 @@ const {
 
 const authMiddleware =
     require('../middleware/auth.middleware');
+const roleMiddleware = require('../middleware/role.middleware');
+
+const adminOnly = roleMiddleware('SUPER_ADMIN', 'ADMIN');
 
 
 // ============================================
@@ -26,6 +29,7 @@ const authMiddleware =
 router.get(
     '/probar',
     authMiddleware,
+    adminOnly,
     probarCumpleanos
 );
 
@@ -37,12 +41,14 @@ router.get(
 router.get(
     '/',
     authMiddleware,
+    adminOnly,
     listarCumpleanosPendientes
 );
 
 router.get(
     '/todos',
     authMiddleware,
+    adminOnly,
     listarTodosCumpleanos
 );
 
@@ -54,6 +60,7 @@ router.get(
 router.get(
     '/:id',
     authMiddleware,
+    adminOnly,
     obtenerCumpleanos
 );
 
@@ -65,6 +72,7 @@ router.get(
 router.post(
     '/:id/enviar',
     authMiddleware,
+    adminOnly,
     enviarCorreoCumpleanos
 );
 
@@ -76,6 +84,7 @@ router.post(
 router.patch(
     '/:id/ignorar',
     authMiddleware,
+    adminOnly,
     ignorarCumpleanos
 );
 

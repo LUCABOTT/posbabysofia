@@ -13,11 +13,14 @@ const {
 const authMiddleware = require('../middleware/auth.middleware');
 const roleMiddleware = require('../middleware/role.middleware');
 
+const adminOnly = roleMiddleware('SUPER_ADMIN', 'ADMIN');
+
 
 // Ver movimientos
 router.get(
     '/movimientos',
     authMiddleware,
+    adminOnly,
     listarMovimientos
 );
 
@@ -26,6 +29,7 @@ router.get(
 router.get(
     '/producto/:id',
     authMiddleware,
+    adminOnly,
     movimientosProducto
 );
 

@@ -216,11 +216,17 @@ const listarUsuarios = async (req, res) => {
 const editarUsuario = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, email, rol_id } = req.body;
+    const { nombre, email, password, rol_id } = req.body;
 
     if (!nombre?.trim() || !email?.trim() || !rol_id) {
       return res.status(400).json({
         message: 'nombre, email y rol_id son obligatorios'
+      });
+    }
+
+    if (password !== undefined && password !== '' && password.length < 6) {
+      return res.status(400).json({
+        message: 'La contraseña debe tener al menos 6 caracteres'
       });
     }
 
@@ -262,6 +268,10 @@ const editarUsuario = async (req, res) => {
     usuario.nombre = nombre.trim();
     usuario.email = emailNormalizado;
     usuario.rol_id = rol.id;
+
+    if (password) {
+      usuario.password = await bcrypt.hash(password, 10);
+    }
 
     await usuario.save();
 

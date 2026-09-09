@@ -8,12 +8,16 @@ const {
 } = require('../controllers/movimientoCaja.controller');
 
 const authMiddleware = require('../middleware/auth.middleware');
+const roleMiddleware = require('../middleware/role.middleware');
+
+const adminOnly = roleMiddleware('SUPER_ADMIN', 'ADMIN');
 
 
 // Crear ingreso / egreso
 router.post(
     '/',
     authMiddleware,
+    adminOnly,
     crearMovimiento
 );
 
@@ -22,6 +26,7 @@ router.post(
 router.get(
     '/',
     authMiddleware,
+    adminOnly,
     listarMovimientos
 );
 
