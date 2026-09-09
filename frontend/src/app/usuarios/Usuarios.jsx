@@ -23,6 +23,7 @@ import {
     editarUsuario as editarUsuarioService,
     cambiarEstadoUsuario
 } from '../../services/usuarioService'
+import { useConfirm } from '../../components/ui/confirmContext'
 
 
 const formularioInicial = {
@@ -41,6 +42,7 @@ const formularioEditarInicial = {
 
 
 function Usuarios() {
+    const confirmar = useConfirm()
 
     // =========================================================
     // REGISTRO
@@ -146,6 +148,14 @@ function Usuarios() {
 
         event.preventDefault()
 
+        const aceptado = await confirmar({
+            titulo: 'Agregar usuario',
+            mensaje: `¿Estás seguro de agregar al usuario "${formulario.nombre.trim() || 'sin nombre'}"?`,
+            confirmarTexto: 'Agregar',
+        })
+
+        if (!aceptado) return
+
         setGuardando(true)
         setError('')
         setMensaje('')
@@ -250,6 +260,14 @@ function Usuarios() {
 
         event.preventDefault()
 
+        const aceptado = await confirmar({
+            titulo: 'Editar usuario',
+            mensaje: `¿Estás seguro de guardar los cambios de "${formularioEditar.nombre.trim() || 'sin nombre'}"?`,
+            confirmarTexto: 'Guardar cambios',
+        })
+
+        if (!aceptado) return
+
         setGuardandoEdicion(true)
         setError('')
         setMensaje('')
@@ -307,11 +325,13 @@ function Usuarios() {
             ? 'activar'
             : 'desactivar'
 
-        const confirmar = window.confirm(
-            `¿Estás seguro de que deseas ${accion} al usuario "${usuario.nombre}"?`
-        )
+        const aceptado = await confirmar({
+            titulo: `${accion === 'activar' ? 'Activar' : 'Desactivar'} usuario`,
+            mensaje: `¿Estás seguro de que deseas ${accion} al usuario "${usuario.nombre}"?`,
+            confirmarTexto: accion === 'activar' ? 'Activar' : 'Desactivar',
+        })
 
-        if (!confirmar) {
+        if (!aceptado) {
             return
         }
 

@@ -20,8 +20,10 @@ import {
   eliminarCategoria,
   eliminarCategoriaDefinitiva,
 } from '../../services/categoriaService'
+import { useConfirm } from '../../components/ui/confirmContext'
 
 const Categoria = () => {
+  const confirmar = useConfirm()
   // ==============================
   // ESTADOS
   // ==============================
@@ -151,6 +153,14 @@ const Categoria = () => {
   const manejarCrear = async (e) => {
     e.preventDefault()
 
+    const aceptado = await confirmar({
+      titulo: 'Agregar categoría',
+      mensaje: `¿Estás seguro de agregar la categoría "${nombre.trim() || 'sin nombre'}"?`,
+      confirmarTexto: 'Agregar',
+    })
+
+    if (!aceptado) return
+
     setError('')
     setMensaje('')
 
@@ -205,6 +215,14 @@ const Categoria = () => {
 
   const manejarActualizar = async (e) => {
     e.preventDefault()
+
+    const aceptado = await confirmar({
+      titulo: 'Editar categoría',
+      mensaje: `¿Estás seguro de guardar los cambios de "${nombre.trim() || 'sin nombre'}"?`,
+      confirmarTexto: 'Guardar cambios',
+    })
+
+    if (!aceptado) return
 
     setError('')
     setMensaje('')
@@ -313,11 +331,14 @@ const Categoria = () => {
   const manejarEliminarDefinitivo = async (
     categoria
   ) => {
-    const confirmar = window.confirm(
-      `¿Estás seguro de eliminar definitivamente la categoría "${categoria.nombre}"? Esta acción no se puede deshacer.`
-    )
+    const aceptado = await confirmar({
+      titulo: 'Eliminar categoría definitivamente',
+      mensaje: `¿Estás seguro de eliminar definitivamente la categoría "${categoria.nombre}"? Esta acción no se puede deshacer.`,
+      confirmarTexto: 'Eliminar',
+      peligrosa: true,
+    })
 
-    if (!confirmar) return
+    if (!aceptado) return
 
     try {
       setError('')
@@ -354,11 +375,13 @@ const Categoria = () => {
   // ==============================
 
   const manejarEliminar = async (categoria) => {
-    const confirmar = window.confirm(
-      `¿Deseas desactivar la categoría "${categoria.nombre}"?`
-    )
+    const aceptado = await confirmar({
+      titulo: 'Desactivar categoría',
+      mensaje: `¿Deseas desactivar la categoría "${categoria.nombre}"?`,
+      confirmarTexto: 'Desactivar',
+    })
 
-    if (!confirmar) return
+    if (!aceptado) return
 
     try {
       setError('')

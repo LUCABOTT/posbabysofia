@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, LockKeyhole, Mail, Store } from 'lucide-react'
+import { Code2, Eye, EyeOff, LockKeyhole, Mail, Store } from 'lucide-react'
 import MainLayout from './components/layout/MainLayout'
+import { ConfirmProvider } from './components/ui/confirmContext'
 import api from './services/api'
 
 import Dashboard from './app/dashboard/Dashboard'
@@ -69,7 +70,7 @@ function Login() {
         <div className="relative hidden min-h-[620px] overflow-hidden bg-baby-primary p-10 text-white lg:flex lg:flex-col lg:justify-between">
           <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border-[38px] border-white/10" />
           <div className="absolute -bottom-28 -left-20 h-80 w-80 rounded-full border-[48px] border-baby-secondary/30" />
-          <div className="relative"><div className="mb-10 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15"><Store size={25} /></div><p className="text-sm font-semibold uppercase tracking-[0.2em] text-baby-secondary">Baby Sofia</p><h1 className="mt-5 max-w-sm text-5xl font-bold leading-tight">Tu tienda, siempre en orden.</h1><p className="mt-5 max-w-sm text-base leading-7 text-white/75">Controla productos, ventas y existencias desde un solo lugar.</p></div>
+          <div className="relative"><div className="mb-10 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15"><Store size={25} /></div><p className="text-sm font-semibold uppercase tracking-[0.2em] text-baby-secondary">Baby Sofia</p><h1 className="mt-5 max-w-sm text-5xl font-bold leading-tight">Tu tienda, siempre en orden.</h1><p className="mt-5 max-w-sm text-base leading-7 text-white/75">Controla productos, ventas y existencias desde un solo lugar.</p><div className="mt-6 flex max-w-sm justify-center"><div className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3.5 py-2.5 shadow-lg backdrop-blur-sm"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-500 text-white"><Code2 size={14} /></span><span className="text-left"><span className="block text-[10px] font-medium uppercase tracking-wider text-white/60">Desarrollado por</span><span className="block text-xs font-semibold text-white">Luca Botteri</span></span></div></div></div>
           <p className="relative text-sm text-white/60">Punto de Venta</p>
         </div>
         <div className="flex items-center justify-center p-6 sm:p-12 lg:p-16">
@@ -85,6 +86,7 @@ function Login() {
           </div>
         </div>
       </div>
+
     </div>
   )
 }
@@ -92,7 +94,8 @@ function Login() {
 function App() {
 
   return (
-    <BrowserRouter>
+    <ConfirmProvider>
+      <BrowserRouter>
 
       <Routes>
 
@@ -193,7 +196,8 @@ function App() {
 
       </Routes>
 
-    </BrowserRouter>
+      </BrowserRouter>
+    </ConfirmProvider>
   )
 }
 
