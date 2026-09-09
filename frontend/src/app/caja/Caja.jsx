@@ -897,7 +897,14 @@ const Caja = () => {
 
                                                 <td className="px-6 py-4 text-sm text-gray-700">
 
-                                                    {movimiento.motivo}
+                                                    <div>
+                                                        <p>{movimiento.motivo}</p>
+                                                        {Number(movimiento.descuento_productos || 0) > 0 && (
+                                                            <p className="mt-1 text-xs text-gray-500">
+                                                                Descuento aplicado: {formatoMoneda(movimiento.descuento_productos)}
+                                                            </p>
+                                                        )}
+                                                    </div>
 
                                                 </td>
 
@@ -1820,7 +1827,14 @@ const Caja = () => {
                                                             </td>
 
                                                             <td className="px-4 py-3 text-sm">
-                                                                {movimiento.motivo}
+                                                                <div>
+                                                                    <p>{movimiento.motivo}</p>
+                                                                    {Number(movimiento.descuento_productos || 0) > 0 && (
+                                                                        <p className="mt-1 text-xs text-gray-500">
+                                                                            Descuento aplicado: {formatoMoneda(movimiento.descuento_productos)}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
                                                             </td>
 
                                                             <td className="px-4 py-3 text-sm text-right font-medium">

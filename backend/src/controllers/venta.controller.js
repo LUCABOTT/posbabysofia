@@ -186,8 +186,11 @@ const crearVenta = async (req, res) => {
             // SUBTOTAL
             // =========================
 
-            const precio =
-                Number(producto.precio_venta);
+            const precioOriginal = Number(producto.precio_venta);
+            const precio = producto.calcularPrecioFinal();
+            const descuentoProducto = Number(
+                (precioOriginal - precio).toFixed(2)
+            );
 
             const subtotalProducto =
                 precio * cantidad;
@@ -197,7 +200,7 @@ const crearVenta = async (req, res) => {
                 producto,
                 cantidad,
                 precio_unitario: precio,
-                descuento: 0,
+                descuento: descuentoProducto,
                 subtotal: subtotalProducto
             });
         }
@@ -225,13 +228,16 @@ const crearVenta = async (req, res) => {
         }
 
 
-        const baseImponible =
+        const totalConDescuento =
             subtotal - Number(descuento);
 
+        const impuesto = Number(
+            (totalConDescuento * 0.15).toFixed(2)
+        );
 
-        // Actualmente el impuesto permanece en 0.
-        const impuesto = 0;
-
+        const baseImponible = Number(
+            (totalConDescuento - impuesto).toFixed(2)
+        );
 
         const total =
             baseImponible + impuesto;
@@ -620,6 +626,19 @@ const crearVenta = async (req, res) => {
 
         if (pago.metodo === 'EFECTIVO') {
 
+            const descuentoProductos = Number(
+                detalles.reduce(
+                    (totalDescuento, detalle) =>
+                        totalDescuento +
+                        detalle.descuento * detalle.cantidad,
+                    0
+                ).toFixed(2)
+            );
+
+            const detalleDescuento = descuentoProductos > 0
+                ? ` | Descuento productos: L ${descuentoProductos.toFixed(2)}`
+                : '';
+
             await MovimientoCaja.create({
 
                 caja_id:
@@ -637,7 +656,7 @@ const crearVenta = async (req, res) => {
                     total,
 
                 motivo:
-                    `Venta ${venta.numero}`
+                    `Venta ${venta.numero}${detalleDescuento}`
 
             }, {
                 transaction
@@ -740,6 +759,9 @@ const crearVenta = async (req, res) => {
 
                 impuesto:
                     venta.impuesto,
+
+                base_gravada:
+                    baseImponible,
 
                 total:
                     venta.total,
@@ -844,6 +866,17 @@ const listarVentas = async (req, res) => {
                         'fecha_emision',
                         'estado'
                     ]
+                },
+                {
+                    association: 'pagos',
+                    attributes: [
+                        'id',
+                        'metodo',
+                        'monto',
+                        'monto_recibido',
+                        'cambio',
+                        'referencia'
+                    ]
                 }
             ],
             order: [['created_at', 'DESC']]
@@ -904,6 +937,17 @@ const obtenerVenta = async (req, res) => {
                         'rtn_emisor',
                         'fecha_emision',
                         'estado'
+                    ]
+                },
+                {
+                    association: 'pagos',
+                    attributes: [
+                        'id',
+                        'metodo',
+                        'monto',
+                        'monto_recibido',
+                        'cambio',
+                        'referencia'
                     ]
                 }
             ]

@@ -4,7 +4,8 @@ const router = express.Router();
 
 const {
     crearConfiguracionFiscal,
-    obtenerConfiguracionFiscal
+    obtenerConfiguracionFiscal,
+    actualizarConfiguracionFiscal
 } = require('../controllers/configuracionFiscalController');
 
 
@@ -21,6 +22,12 @@ router.post(
 router.get(
     '/',
     obtenerConfiguracionFiscal
+);
+
+
+router.put(
+    '/:id',
+    actualizarConfiguracionFiscal
 );
 
 

@@ -82,6 +82,34 @@ module.exports = (sequelize, DataTypes) => {
                 defaultValue: 0
             },
 
+            descuento_tipo: {
+                type: DataTypes.ENUM('PORCENTAJE', 'MONTO'),
+                allowNull: true,
+                defaultValue: null
+            },
+
+            descuento_valor: {
+                type: DataTypes.DECIMAL(10, 2),
+                allowNull: false,
+                defaultValue: 0
+            },
+
+            descuento_inicio: {
+                type: DataTypes.DATEONLY,
+                allowNull: true
+            },
+
+            descuento_fin: {
+                type: DataTypes.DATEONLY,
+                allowNull: true
+            },
+
+            descuento_activo: {
+                type: DataTypes.BOOLEAN,
+                allowNull: false,
+                defaultValue: true
+            },
+
             activo: {
                 type: DataTypes.BOOLEAN,
                 allowNull: false,
@@ -97,6 +125,31 @@ module.exports = (sequelize, DataTypes) => {
             updatedAt: 'updated_at'
         }
     );
+
+    Producto.prototype.tieneDescuentoVigente = function () {
+        if (!this.descuento_tipo || !this.descuento_activo) return false;
+        if (Number(this.descuento_valor) <= 0) return false;
+
+        const hoy = new Date().toISOString().slice(0, 10);
+
+        if (this.descuento_inicio && hoy < this.descuento_inicio) return false;
+        if (this.descuento_fin && hoy > this.descuento_fin) return false;
+
+        return true;
+    };
+
+    Producto.prototype.calcularPrecioFinal = function () {
+        const precioVenta = Number(this.precio_venta);
+
+        if (!this.tieneDescuentoVigente()) return precioVenta;
+
+        const valor = Number(this.descuento_valor);
+        const precioFinal = this.descuento_tipo === 'PORCENTAJE'
+            ? precioVenta - (precioVenta * valor / 100)
+            : precioVenta - valor;
+
+        return Math.max(0, Number(precioFinal.toFixed(2)));
+    };
 
     return Producto;
 };

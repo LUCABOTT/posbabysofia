@@ -15,8 +15,11 @@ import Facturas from './app/facturas/Facturas'
 import FacturaDetalle from './app/facturas/FacturaDetalle'
 import Ventas from './app/ventas/Ventas'
 import NuevaVenta from './app/ventas/NuevaVenta'
+import VentaDetalle from './app/ventas/VentaDetalle'
 import Configuracion from './app/configuracion/Configuracion'
 import Usuarios from './app/usuarios/Usuarios'
+import CumpleanosCorreo from './app/cumpleanos/CumpleanosCorreo'
+import Cumpleanos from './app/cumpleanos/Cumpleanos'
 
 
 function Placeholder({ titulo }) {
@@ -137,6 +140,11 @@ function App() {
           />
 
           <Route
+            path="/ventas/:id"
+            element={<VentaDetalle />}
+          />
+
+          <Route
             path="/facturas"
             element={<Facturas />}
           />
@@ -169,6 +177,16 @@ function App() {
           <Route
             path="/usuarios"
             element={<Usuarios />}
+          />
+
+          <Route
+            path="/cumpleanos/:id/correo"
+            element={<CumpleanosCorreo />}
+          />
+
+          <Route
+            path="/cumpleanos"
+            element={<Cumpleanos />}
           />
 
         </Route>

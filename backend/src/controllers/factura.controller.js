@@ -464,6 +464,9 @@ const obtenerFacturaParaImpresion = async (req, res) => {
                 fecha_emision:
                     factura.fecha_emision,
 
+                fecha_hora_emision:
+                    factura.created_at,
+
                 fecha_limite_emision:
                     factura.configuracionFiscal
                         ?.fecha_limite_emision,
@@ -569,6 +572,13 @@ const obtenerFacturaParaImpresion = async (req, res) => {
 
                 impuesto:
                     factura.venta.impuesto,
+
+                base_gravada:
+                    Number(factura.venta.total) -
+                    Number(factura.venta.impuesto),
+
+                isv_porcentaje:
+                    15,
 
                 total:
                     factura.venta.total

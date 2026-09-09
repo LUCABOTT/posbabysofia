@@ -21,3 +21,16 @@ export const crearConfiguracionFiscal = async (data) => {
 
     return response.data
 }
+
+// ==============================
+// ACTUALIZAR CONFIGURACIÓN FISCAL
+// ==============================
+
+export const actualizarConfiguracionFiscal = async (id, data) => {
+    const response = await api.put(
+        `/configuracion-fiscal/${id}`,
+        data
+    )
+
+    return response.data
+}

@@ -1,6 +1,46 @@
-const { Producto, Categoria } = require('../models');
+const {
+    Producto,
+    Categoria,
+    MovimientoInventario,
+    sequelize
+} = require('../models');
+const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
+
+const validarDescuento = ({ descuento_tipo, descuento_valor, descuento_inicio, descuento_fin }, precioVenta) => {
+    if (!descuento_tipo) return null;
+
+    if (!['PORCENTAJE', 'MONTO'].includes(descuento_tipo)) {
+        return 'descuento_tipo inválido';
+    }
+
+    const valor = Number(descuento_valor);
+
+    if (!Number.isFinite(valor) || valor <= 0) {
+        return 'descuento_valor debe ser mayor a 0 cuando se define un tipo de descuento';
+    }
+
+    if (descuento_tipo === 'PORCENTAJE' && valor > 100) {
+        return 'El descuento porcentual no puede ser mayor a 100';
+    }
+
+    if (descuento_tipo === 'MONTO' && precioVenta !== undefined && valor >= Number(precioVenta)) {
+        return 'El descuento en monto no puede ser mayor o igual al precio de venta';
+    }
+
+    if (descuento_inicio && descuento_fin && descuento_inicio > descuento_fin) {
+        return 'descuento_inicio no puede ser posterior a descuento_fin';
+    }
+
+    return null;
+};
+
+const serializarProducto = (producto) => ({
+    ...producto.toJSON(),
+    precio_final: producto.calcularPrecioFinal(),
+    descuento_vigente: producto.tieneDescuentoVigente()
+});
 
 const CARPETA_DESTINO = path.join(__dirname, '..', '..', 'uploads', 'productos');
 
@@ -35,7 +75,7 @@ const listarProductos = async (req, res) => {
             order: [['id', 'ASC']]
         });
 
-        res.json(productos);
+        res.json(productos.map(serializarProducto));
 
     } catch (error) {
         console.error('Error al listar productos:', error);
@@ -68,7 +108,7 @@ const obtenerProducto = async (req, res) => {
             });
         }
 
-        res.json(producto);
+        res.json(serializarProducto(producto));
 
     } catch (error) {
         console.error('Error al obtener producto:', error);
@@ -87,25 +127,28 @@ const crearProducto = async (req, res) => {
     try {
         const {
             categoria_id,
-            codigo,
             nombre,
             descripcion,
             precio_compra,
             precio_venta,
             stock,
-            stock_minimo
+            stock_minimo,
+            descuento_tipo,
+            descuento_valor,
+            descuento_inicio,
+            descuento_fin,
+            descuento_activo
         } = req.body;
 
         if (
             !categoria_id ||
-            !codigo ||
             !nombre ||
             precio_venta === undefined
         ) {
             if (req.file) borrarImagen(req.file.filename);
 
             return res.status(400).json({
-                message: 'categoria_id, codigo, nombre y precio_venta son obligatorios'
+                message: 'categoria_id, nombre y precio_venta son obligatorios'
             });
         }
 
@@ -127,17 +170,33 @@ const crearProducto = async (req, res) => {
             });
         }
 
-        const productoExistente = await Producto.findOne({
-            where: { codigo }
+        const errorDescuento = validarDescuento(
+            { descuento_tipo, descuento_valor, descuento_inicio, descuento_fin },
+            precio_venta
+        );
+
+        if (errorDescuento) {
+            if (req.file) borrarImagen(req.file.filename);
+            return res.status(400).json({ message: errorDescuento });
+        }
+
+        const productosConCodigo = await Producto.findAll({
+            attributes: ['codigo'],
+            where: {
+                codigo: {
+                    [Op.like]: 'PROD-%'
+                }
+            }
         });
 
-        if (productoExistente) {
-            if (req.file) borrarImagen(req.file.filename);
+        const ultimoNumero = productosConCodigo.reduce((mayor, producto) => {
+            const coincidencia = /^PROD-(\d+)$/.exec(producto.codigo);
+            const numero = coincidencia ? Number(coincidencia[1]) : 0;
 
-            return res.status(409).json({
-                message: 'Ya existe un producto con ese código'
-            });
-        }
+            return Math.max(mayor, numero);
+        }, 0);
+
+        const codigo = `PROD-${ultimoNumero + 1}`;
 
         const producto = await Producto.create({
             categoria_id,
@@ -148,6 +207,13 @@ const crearProducto = async (req, res) => {
             precio_venta,
             stock: stock ?? 0,
             stock_minimo: stock_minimo ?? 0,
+            descuento_tipo: descuento_tipo || null,
+            descuento_valor: descuento_valor ?? 0,
+            descuento_inicio: descuento_inicio || null,
+            descuento_fin: descuento_fin || null,
+            descuento_activo: descuento_activo !== undefined
+                ? descuento_activo === 'true' || descuento_activo === true
+                : true,
             imagen: req.file
                 ? `/uploads/productos/${req.file.filename}`
                 : null
@@ -174,10 +240,17 @@ const crearProducto = async (req, res) => {
 // ACTUALIZAR PRODUCTO
 // ==============================
 const actualizarProducto = async (req, res) => {
+    const transaction = await sequelize.transaction();
+
     try {
-        const producto = await Producto.findByPk(req.params.id);
+        const producto = await Producto.findByPk(req.params.id, {
+            transaction,
+            lock: transaction.LOCK.UPDATE
+        });
 
         if (!producto) {
+            await transaction.rollback();
+
             if (req.file) borrarImagen(req.file.filename);
 
             return res.status(404).json({
@@ -194,7 +267,12 @@ const actualizarProducto = async (req, res) => {
             precio_venta,
             stock,
             stock_minimo,
-            activo
+            activo,
+            descuento_tipo,
+            descuento_valor,
+            descuento_inicio,
+            descuento_fin,
+            descuento_activo
         } = req.body;
 
         let categoria = null;
@@ -203,6 +281,8 @@ const actualizarProducto = async (req, res) => {
             categoria = await Categoria.findByPk(categoria_id);
 
             if (!categoria) {
+                await transaction.rollback();
+
                 if (req.file) borrarImagen(req.file.filename);
 
                 return res.status(400).json({
@@ -212,6 +292,8 @@ const actualizarProducto = async (req, res) => {
         }
 
         if (categoria_id !== undefined && !categoria.activo) {
+            await transaction.rollback();
+
             if (req.file) borrarImagen(req.file.filename);
 
             return res.status(400).json({
@@ -225,6 +307,8 @@ const actualizarProducto = async (req, res) => {
             });
 
             if (existente) {
+                await transaction.rollback();
+
                 if (req.file) borrarImagen(req.file.filename);
 
                 return res.status(409).json({
@@ -232,6 +316,23 @@ const actualizarProducto = async (req, res) => {
                 });
             }
         }
+
+        const errorDescuento = validarDescuento(
+            { descuento_tipo, descuento_valor, descuento_inicio, descuento_fin },
+            precio_venta ?? producto.precio_venta
+        );
+
+        if (errorDescuento) {
+            await transaction.rollback();
+
+            if (req.file) borrarImagen(req.file.filename);
+            return res.status(400).json({ message: errorDescuento });
+        }
+
+        const stockAnterior = Number(producto.stock);
+        const stockCambio =
+            stock !== undefined &&
+            Number(stock) !== stockAnterior;
 
         // Si sube una imagen nueva, borramos la anterior
         const imagenAnterior = producto.imagen;
@@ -249,8 +350,27 @@ const actualizarProducto = async (req, res) => {
             stock,
             stock_minimo,
             activo,
+            descuento_tipo,
+            descuento_valor,
+            descuento_inicio,
+            descuento_fin,
+            descuento_activo,
             imagen: nuevaImagen
-        });
+        }, { transaction });
+
+        if (stockCambio) {
+            await MovimientoInventario.create({
+                producto_id: producto.id,
+                usuario_id: req.user.id,
+                tipo: 'AJUSTE',
+                cantidad: Math.abs(Number(stock) - stockAnterior),
+                stock_anterior: stockAnterior,
+                stock_nuevo: Number(stock),
+                motivo: 'Ajuste por edición del producto'
+            }, { transaction });
+        }
+
+        await transaction.commit();
 
         if (req.file && imagenAnterior) {
             borrarImagen(imagenAnterior);
@@ -262,6 +382,10 @@ const actualizarProducto = async (req, res) => {
         });
 
     } catch (error) {
+        if (!transaction.finished) {
+            await transaction.rollback();
+        }
+
         if (req.file) borrarImagen(req.file.filename);
 
         console.error('Error al actualizar producto:', error);

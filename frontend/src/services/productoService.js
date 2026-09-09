@@ -33,6 +33,15 @@ export const actualizarProducto = async (
   return response.data
 }
 
+export const actualizarDescuentoProducto = async (id, data) => {
+  const response = await api.patch(
+    `/productos/${id}/descuento`,
+    data
+  )
+
+  return response.data
+}
+
 export const eliminarProducto = async (id) => {
   const response = await api.delete(
     `/productos/${id}`

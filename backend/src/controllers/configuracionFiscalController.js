@@ -1,6 +1,7 @@
 const {
     ConfiguracionFiscal
 } = require('../models');
+const { Op } = require('sequelize');
 
 
 // ==============================
@@ -297,9 +298,142 @@ const obtenerConfiguracionFiscal = async (req, res) => {
 };
 
 
+// ==============================
+// ACTUALIZAR CONFIGURACIÓN FISCAL
+// ==============================
+
+const actualizarConfiguracionFiscal = async (req, res) => {
+
+    try {
+
+        const configuracion = await ConfiguracionFiscal.findByPk(req.params.id);
+
+        if (!configuracion) {
+            return res.status(404).json({
+                message: 'No existe la configuración fiscal'
+            });
+        }
+
+        const {
+            cai,
+            rtn,
+            razon_social,
+            nombre_comercial,
+            direccion,
+            telefono,
+            fecha_limite_emision,
+            prefijo_factura,
+            rango_inicial,
+            rango_final,
+            siguiente_numero,
+            activo
+        } = req.body;
+
+        if (
+            !cai ||
+            !rtn ||
+            !razon_social ||
+            !fecha_limite_emision ||
+            !prefijo_factura ||
+            rango_inicial === undefined ||
+            rango_final === undefined
+        ) {
+            return res.status(400).json({
+                message: 'Faltan datos obligatorios'
+            });
+        }
+
+        const prefijo = prefijo_factura.trim();
+        const formatoPrefijo = /^\d{3}-\d{3}-\d{2}$/;
+
+        if (!formatoPrefijo.test(prefijo)) {
+            return res.status(400).json({
+                message: 'El prefijo de factura debe tener el formato 000-001-01'
+            });
+        }
+
+        const inicio = Number(rango_inicial);
+        const fin = Number(rango_final);
+        const siguiente = siguiente_numero !== undefined
+            ? Number(siguiente_numero)
+            : inicio;
+
+        if (
+            !Number.isInteger(inicio) ||
+            !Number.isInteger(fin) ||
+            !Number.isInteger(siguiente)
+        ) {
+            return res.status(400).json({
+                message: 'Los rangos y el siguiente número deben ser enteros'
+            });
+        }
+
+        if (inicio <= 0 || fin <= 0) {
+            return res.status(400).json({
+                message: 'Los rangos deben ser mayores que 0'
+            });
+        }
+
+        if (inicio > fin) {
+            return res.status(400).json({
+                message: 'El rango inicial no puede ser mayor que el rango final'
+            });
+        }
+
+        if (siguiente < inicio || siguiente > fin) {
+            return res.status(400).json({
+                message: 'El siguiente número debe estar dentro del rango autorizado'
+            });
+        }
+
+        const existe = await ConfiguracionFiscal.findOne({
+            where: {
+                cai: cai.trim(),
+                id: { [Op.ne]: configuracion.id }
+            }
+        });
+
+        if (existe) {
+            return res.status(400).json({
+                message: 'Ya existe una configuración fiscal con este CAI'
+            });
+        }
+
+        await configuracion.update({
+            cai: cai.trim(),
+            rtn: rtn.trim(),
+            razon_social: razon_social.trim(),
+            nombre_comercial: nombre_comercial ? nombre_comercial.trim() : null,
+            direccion: direccion ? direccion.trim() : null,
+            telefono: telefono ? telefono.trim() : null,
+            fecha_limite_emision,
+            prefijo_factura: prefijo,
+            rango_inicial: inicio,
+            rango_final: fin,
+            siguiente_numero: siguiente,
+            activo: activo !== undefined ? Boolean(activo) : configuracion.activo
+        });
+
+        return res.json({
+            message: 'Configuración fiscal actualizada correctamente',
+            configuracion
+        });
+
+    } catch (error) {
+
+        console.error('Error al actualizar configuración fiscal:', error);
+
+        return res.status(500).json({
+            message: 'Error interno del servidor'
+        });
+    }
+};
+
+
 module.exports = {
 
     crearConfiguracionFiscal,
-    obtenerConfiguracionFiscal
+    obtenerConfiguracionFiscal,
+    actualizarConfiguracionFiscal
 
 };
