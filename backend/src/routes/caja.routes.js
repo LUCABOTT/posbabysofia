@@ -12,12 +12,16 @@ const {
 } = require('../controllers/caja.controller');
 
 const authMiddleware = require('../middleware/auth.middleware');
+const roleMiddleware = require('../middleware/role.middleware');
+
+const adminOnly = roleMiddleware('SUPER_ADMIN', 'ADMIN');
 
 
 // Abrir caja
 router.post(
     '/abrir',
     authMiddleware,
+    adminOnly,
     abrirCaja
 );
 
@@ -26,6 +30,7 @@ router.post(
 router.get(
     '/actual',
     authMiddleware,
+    adminOnly,
     obtenerCajaActual
 );
 
@@ -33,24 +38,28 @@ router.get(
 router.post(
     '/movimiento',
     authMiddleware,
+    adminOnly,
     registrarMovimiento
 );
 
 router.post(
     '/cerrar',
     authMiddleware,
+    adminOnly,
     cerrarCaja
     );
 
 router.get(
     '/historial',
     authMiddleware,
+    adminOnly,
      historialCajas
     );
 
 router.get(
     '/:id',
     authMiddleware,
+    adminOnly,
     obtenerCajaPorId
 );
 

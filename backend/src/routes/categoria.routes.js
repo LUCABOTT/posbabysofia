@@ -14,15 +14,19 @@ const {
 const authMiddleware = require('../middleware/auth.middleware');
 const roleMiddleware = require('../middleware/role.middleware');
 
+const adminOnly = roleMiddleware('SUPER_ADMIN', 'ADMIN');
+
 router.get(
     '/',
     authMiddleware,
+    adminOnly,
     obtenerCategorias
 );
 
 router.get(
     '/:id',
     authMiddleware,
+    adminOnly,
     obtenerCategoria
 );
 

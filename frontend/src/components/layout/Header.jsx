@@ -11,31 +11,15 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 import socket from '../../services/socket'
+import { useAuth } from '../../auth/AuthContext'
 
 function Header({ abrirMenu }) {
-  const [usuario, setUsuario] = useState(null)
+  const { usuario } = useAuth()
   const [cumpleanos, setCumpleanos] = useState([])
   const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false)
   const [ignorandoId, setIgnorandoId] = useState(null)
 
   const navigate = useNavigate()
-
-  // ==========================================
-  // CARGAR USUARIO
-  // ==========================================
-
-  useEffect(() => {
-    const cargarUsuario = async () => {
-      try {
-        const response = await api.get('/auth/me')
-        setUsuario(response.data.user)
-      } catch {
-        setUsuario(null)
-      }
-    }
-
-    cargarUsuario()
-  }, [])
 
   // ==========================================
   // NOTIFICACIONES DE CUMPLEAÑOS
