@@ -1,4 +1,9 @@
-const { Producto, Categoria } = require('../models');
+const {
+    Producto,
+    Categoria,
+    MovimientoInventario,
+    sequelize
+} = require('../models');
 const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
@@ -235,10 +240,17 @@ const crearProducto = async (req, res) => {
 // ACTUALIZAR PRODUCTO
 // ==============================
 const actualizarProducto = async (req, res) => {
+    const transaction = await sequelize.transaction();
+
     try {
-        const producto = await Producto.findByPk(req.params.id);
+        const producto = await Producto.findByPk(req.params.id, {
+            transaction,
+            lock: transaction.LOCK.UPDATE
+        });
 
         if (!producto) {
+            await transaction.rollback();
+
             if (req.file) borrarImagen(req.file.filename);
 
             return res.status(404).json({
@@ -269,6 +281,8 @@ const actualizarProducto = async (req, res) => {
             categoria = await Categoria.findByPk(categoria_id);
 
             if (!categoria) {
+                await transaction.rollback();
+
                 if (req.file) borrarImagen(req.file.filename);
 
                 return res.status(400).json({
@@ -278,6 +292,8 @@ const actualizarProducto = async (req, res) => {
         }
 
         if (categoria_id !== undefined && !categoria.activo) {
+            await transaction.rollback();
+
             if (req.file) borrarImagen(req.file.filename);
 
             return res.status(400).json({
@@ -291,6 +307,8 @@ const actualizarProducto = async (req, res) => {
             });
 
             if (existente) {
+                await transaction.rollback();
+
                 if (req.file) borrarImagen(req.file.filename);
 
                 return res.status(409).json({
@@ -305,9 +323,16 @@ const actualizarProducto = async (req, res) => {
         );
 
         if (errorDescuento) {
+            await transaction.rollback();
+
             if (req.file) borrarImagen(req.file.filename);
             return res.status(400).json({ message: errorDescuento });
         }
+
+        const stockAnterior = Number(producto.stock);
+        const stockCambio =
+            stock !== undefined &&
+            Number(stock) !== stockAnterior;
 
         // Si sube una imagen nueva, borramos la anterior
         const imagenAnterior = producto.imagen;
@@ -331,7 +356,21 @@ const actualizarProducto = async (req, res) => {
             descuento_fin,
             descuento_activo,
             imagen: nuevaImagen
-        });
+        }, { transaction });
+
+        if (stockCambio) {
+            await MovimientoInventario.create({
+                producto_id: producto.id,
+                usuario_id: req.user.id,
+                tipo: 'AJUSTE',
+                cantidad: Math.abs(Number(stock) - stockAnterior),
+                stock_anterior: stockAnterior,
+                stock_nuevo: Number(stock),
+                motivo: 'Ajuste por edición del producto'
+            }, { transaction });
+        }
+
+        await transaction.commit();
 
         if (req.file && imagenAnterior) {
             borrarImagen(imagenAnterior);
@@ -343,6 +382,10 @@ const actualizarProducto = async (req, res) => {
         });
 
     } catch (error) {
+        if (!transaction.finished) {
+            await transaction.rollback();
+        }
+
         if (req.file) borrarImagen(req.file.filename);
 
         console.error('Error al actualizar producto:', error);

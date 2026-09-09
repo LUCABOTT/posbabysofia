@@ -1,20 +1,28 @@
+
 import {
   Menu,
   Bell,
   UserCircle,
   Cake,
-  Mail
+  Mail,
+  X
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
+import socket from '../../services/socket'
 
 function Header({ abrirMenu }) {
   const [usuario, setUsuario] = useState(null)
   const [cumpleanos, setCumpleanos] = useState([])
   const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false)
+  const [ignorandoId, setIgnorandoId] = useState(null)
 
   const navigate = useNavigate()
+
+  // ==========================================
+  // CARGAR USUARIO
+  // ==========================================
 
   useEffect(() => {
     const cargarUsuario = async () => {
@@ -29,12 +37,20 @@ function Header({ abrirMenu }) {
     cargarUsuario()
   }, [])
 
+  // ==========================================
+  // NOTIFICACIONES DE CUMPLEAÑOS
+  // ==========================================
+
   useEffect(() => {
     const cargarCumpleanos = async () => {
       try {
         const response = await api.get('/cumpleanos')
 
-        setCumpleanos(response.data)
+        setCumpleanos(
+          Array.isArray(response.data)
+            ? response.data
+            : []
+        )
       } catch (error) {
         console.error(
           'Error al cargar notificaciones de cumpleaños:',
@@ -43,8 +59,90 @@ function Header({ abrirMenu }) {
       }
     }
 
+    // Cargar las notificaciones existentes
+    // solamente una vez al montar el componente.
     cargarCumpleanos()
+
+    // ==========================================
+    // NUEVO CUMPLEAÑOS
+    // ==========================================
+
+    const manejarNuevoCumpleanos = (notificacion) => {
+      setCumpleanos((actuales) => {
+
+        // Evitar duplicados
+        const existe = actuales.some(
+          (item) => item.id === notificacion.id
+        )
+
+        if (existe) {
+          return actuales
+        }
+
+        return [
+          notificacion,
+          ...actuales
+        ]
+      })
+    }
+
+    // ==========================================
+    // CUMPLEAÑOS ACTUALIZADO
+    // ==========================================
+
+    const manejarCumpleanosActualizado = ({
+      id,
+      estado
+    }) => {
+
+      if (
+        estado === 'CORREO_ENVIADO' ||
+        estado === 'IGNORADO'
+      ) {
+
+        setCumpleanos((actuales) =>
+          actuales.filter(
+            (item) => item.id !== id
+          )
+        )
+      }
+    }
+
+    // ==========================================
+    // ESCUCHAR EVENTOS SOCKET.IO
+    // ==========================================
+
+    socket.on(
+      'nuevo_cumpleanos',
+      manejarNuevoCumpleanos
+    )
+
+    socket.on(
+      'cumpleanos_actualizado',
+      manejarCumpleanosActualizado
+    )
+
+    // ==========================================
+    // LIMPIAR LISTENERS
+    // ==========================================
+
+    return () => {
+
+      socket.off(
+        'nuevo_cumpleanos',
+        manejarNuevoCumpleanos
+      )
+
+      socket.off(
+        'cumpleanos_actualizado',
+        manejarCumpleanosActualizado
+      )
+    }
   }, [])
+
+  // ==========================================
+  // ABRIR CUMPLEAÑOS
+  // ==========================================
 
   const abrirCumpleanos = (id) => {
     setMostrarNotificaciones(false)
@@ -52,10 +150,39 @@ function Header({ abrirMenu }) {
     navigate(`/cumpleanos/${id}/correo`)
   }
 
+  const verTodasLasNotificaciones = () => {
+    setMostrarNotificaciones(false)
+    navigate('/cumpleanos')
+  }
+
+  const ignorarCumpleanos = async (id) => {
+    try {
+      setIgnorandoId(id)
+
+      await api.patch(`/cumpleanos/${id}/ignorar`)
+
+      setCumpleanos((actuales) =>
+        actuales.filter((item) => item.id !== id)
+      )
+    } catch (error) {
+      console.error(
+        'Error al ignorar notificación de cumpleaños:',
+        error
+      )
+    } finally {
+      setIgnorandoId(null)
+    }
+  }
+
+  // ==========================================
+  // FORMATEAR FECHA
+  // ==========================================
+
   const formatearFecha = (fecha) => {
     if (!fecha) return ''
 
-    const fechaObj = new Date(`${fecha}T00:00:00`)
+    const fechaObj =
+      new Date(`${fecha}T00:00:00`)
 
     return fechaObj.toLocaleDateString('es-HN', {
       day: '2-digit',
@@ -93,6 +220,7 @@ function Header({ abrirMenu }) {
 
       {/* TITULO */}
       <div className="hidden lg:block">
+
         <p className="text-sm text-gray-500">
           Bienvenido al sistema
         </p>
@@ -100,6 +228,7 @@ function Header({ abrirMenu }) {
         <h2 className="text-lg font-semibold text-baby-dark">
           Punto de Venta
         </h2>
+
       </div>
 
 
@@ -122,9 +251,11 @@ function Header({ abrirMenu }) {
               hover:text-baby-primary
             "
           >
+
             <Bell size={21} />
 
             {cumpleanos.length > 0 && (
+
               <span
                 className="
                   absolute -right-1 -top-1
@@ -138,16 +269,21 @@ function Header({ abrirMenu }) {
                   text-white
                 "
               >
+
                 {cumpleanos.length > 99
                   ? '99+'
                   : cumpleanos.length}
+
               </span>
+
             )}
+
           </button>
 
 
           {/* PANEL DE NOTIFICACIONES */}
           {mostrarNotificaciones && (
+
             <div
               className="
                 absolute right-0 top-14
@@ -169,7 +305,9 @@ function Header({ abrirMenu }) {
                   px-4 py-3
                 "
               >
+
                 <div>
+
                   <h3
                     className="
                       text-sm font-semibold
@@ -182,6 +320,7 @@ function Header({ abrirMenu }) {
                   <p className="text-xs text-gray-500">
                     Cumpleaños próximos
                   </p>
+
                 </div>
 
                 <div
@@ -195,6 +334,7 @@ function Header({ abrirMenu }) {
                 >
                   <Cake size={19} />
                 </div>
+
               </div>
 
 
@@ -222,6 +362,7 @@ function Header({ abrirMenu }) {
                 ) : (
 
                   <div>
+
                     {cumpleanos.map((notificacion) => (
 
                       <div
@@ -278,38 +419,79 @@ function Header({ abrirMenu }) {
                               "
                             >
                               Cumpleaños:{' '}
+
                               {formatearFecha(
                                 notificacion.fecha_cumpleanos
                               )}
+
                             </p>
 
 
                             {/* BOTON CORREO */}
-                            <button
-                              onClick={() =>
-                                abrirCumpleanos(
-                                  notificacion.id
-                                )
-                              }
-                              className="
-                                mt-3
-                                inline-flex
-                                items-center
-                                gap-2
-                                rounded-xl
-                                bg-baby-primary
-                                px-3 py-2
-                                text-xs
-                                font-semibold
-                                text-white
-                                transition
-                                hover:opacity-90
-                              "
-                            >
-                              <Mail size={15} />
+                            <div className="mt-3 flex flex-wrap gap-2">
 
-                              Enviar correo
-                            </button>
+                              <button
+                                onClick={() =>
+                                  abrirCumpleanos(
+                                    notificacion.id
+                                  )
+                                }
+                                className="
+                                  inline-flex
+                                  items-center
+                                  gap-2
+                                  rounded-xl
+                                  bg-baby-primary
+                                  px-3 py-2
+                                  text-xs
+                                  font-semibold
+                                  text-white
+                                  transition
+                                  hover:opacity-90
+                                "
+                              >
+
+                                <Mail size={15} />
+
+                                Enviar correo
+
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  ignorarCumpleanos(
+                                    notificacion.id
+                                  )
+                                }
+                                disabled={
+                                  ignorandoId === notificacion.id
+                                }
+                                className="
+                                  inline-flex
+                                  items-center
+                                  gap-2
+                                  rounded-xl
+                                  border border-gray-200
+                                  px-3 py-2
+                                  text-xs
+                                  font-semibold
+                                  text-gray-600
+                                  transition
+                                  hover:bg-gray-100
+                                  disabled:cursor-not-allowed
+                                  disabled:opacity-50
+                                "
+                              >
+
+                                <X size={15} />
+
+                                {ignorandoId === notificacion.id
+                                  ? 'Ignorando...'
+                                  : 'Ignorar'}
+
+                              </button>
+
+                            </div>
 
                           </div>
 
@@ -318,13 +500,34 @@ function Header({ abrirMenu }) {
                       </div>
 
                     ))}
+
                   </div>
 
                 )}
 
               </div>
 
+              <div className="border-t border-gray-100 p-3">
+
+                <button
+                  onClick={verTodasLasNotificaciones}
+                  className="
+                    w-full rounded-xl
+                    border border-baby-primary/20
+                    px-3 py-2.5
+                    text-sm font-semibold
+                    text-baby-primary
+                    transition
+                    hover:bg-baby-secondary/20
+                  "
+                >
+                  Ver todas las notificaciones
+                </button>
+
+              </div>
+
             </div>
+
           )}
 
         </div>
@@ -370,3 +573,4 @@ function Header({ abrirMenu }) {
 }
 
 export default Header
+

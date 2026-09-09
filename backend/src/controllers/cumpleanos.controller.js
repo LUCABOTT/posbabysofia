@@ -17,6 +17,10 @@ const {
     enviarCorreo
 } = require('../services/email.service');
 
+const {
+    obtenerIO
+} = require('../socketServer/socket');
+
 
 const probarCumpleanos = async (req, res) => {
     try {
@@ -74,6 +78,66 @@ const listarCumpleanosPendientes = async (req, res) => {
 
         console.error(
             'Error al listar cumpleaños:',
+            error
+        );
+
+        return res.status(500).json({
+            message: 'Error interno del servidor'
+        });
+    }
+};
+
+
+// LISTAR TODAS LAS NOTIFICACIONES CON PAGINACION
+const listarTodosCumpleanos = async (req, res) => {
+    try {
+        const pagina = Math.max(
+            Number.parseInt(req.query.page, 10) || 1,
+            1
+        );
+        const limite = Math.min(
+            Math.max(
+                Number.parseInt(req.query.limit, 10) || 10,
+                1
+            ),
+            50
+        );
+
+        const resultado =
+            await CumpleanosNotificacion.findAndCountAll({
+                include: [
+                    {
+                        model: Cliente,
+                        as: 'cliente',
+                        attributes: [
+                            'id',
+                            'nombre',
+                            'email',
+                            'telefono',
+                            'fecha_nacimiento'
+                        ]
+                    }
+                ],
+                order: [
+                    ['fecha_notificacion', 'DESC'],
+                    ['id', 'DESC']
+                ],
+                limit: limite,
+                offset: (pagina - 1) * limite,
+                distinct: true
+            });
+
+        return res.json({
+            datos: resultado.rows,
+            total: resultado.count,
+            pagina,
+            limite,
+            totalPaginas: Math.ceil(resultado.count / limite)
+        });
+
+    } catch (error) {
+        console.error(
+            'Error al listar todas las notificaciones de cumpleaños:',
             error
         );
 
@@ -147,13 +211,20 @@ const ignorarCumpleanos = async (req, res) => {
         }
 
         await notificacion.update({
-            estado: 'IGNORADO'
-        });
+                estado: 'IGNORADO'
+            });
 
-        return res.json({
-            message:
-                'Notificación ignorada correctamente'
-        });
+            const io = obtenerIO();
+
+            io.emit('cumpleanos_actualizado', {
+                id: notificacion.id,
+                estado: 'IGNORADO'
+            });
+
+            return res.json({
+                message:
+                    'Notificación ignorada correctamente'
+            });
 
     } catch (error) {
 
@@ -670,6 +741,13 @@ const enviarCorreoCumpleanos = async (req, res) => {
             fecha_envio: new Date()
         });
 
+        const io = obtenerIO();
+
+        io.emit('cumpleanos_actualizado', {
+            id: notificacion.id,
+            estado: 'CORREO_ENVIADO'
+        });
+
 
         return res.json({
             message:
@@ -703,6 +781,7 @@ const enviarCorreoCumpleanos = async (req, res) => {
 
 module.exports = {
     listarCumpleanosPendientes,
+    listarTodosCumpleanos,
     obtenerCumpleanos,
     ignorarCumpleanos,
     enviarCorreoCumpleanos,

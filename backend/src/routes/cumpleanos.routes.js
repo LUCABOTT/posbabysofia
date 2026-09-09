@@ -7,6 +7,7 @@ const router = express.Router();
 
 const {
     listarCumpleanosPendientes,
+    listarTodosCumpleanos,
     obtenerCumpleanos,
     ignorarCumpleanos,
     enviarCorreoCumpleanos,
@@ -37,6 +38,12 @@ router.get(
     '/',
     authMiddleware,
     listarCumpleanosPendientes
+);
+
+router.get(
+    '/todos',
+    authMiddleware,
+    listarTodosCumpleanos
 );
 
 

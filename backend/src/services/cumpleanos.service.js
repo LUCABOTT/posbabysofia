@@ -5,6 +5,10 @@ const {
     CumpleanosNotificacion
 } = require('../models');
 
+const {
+    obtenerIO
+} = require('../socketServer/socket');
+
 /**
  * Obtiene la fecha actual en formato YYYY-MM-DD
  * utilizando la zona horaria local del servidor.
@@ -163,18 +167,34 @@ const procesarCumpleanos = async () => {
             continue;
         }
 
-        await CumpleanosNotificacion.create({
+   const notificacion =
+    await CumpleanosNotificacion.create({
 
-            cliente_id: cliente.id,
+        cliente_id: cliente.id,
 
-            anio_cumpleanos:
-                anioCumpleanos,
+        anio_cumpleanos:
+            anioCumpleanos,
 
-            fecha_cumpleanos:
-                fechaCumpleanosString,
+        fecha_cumpleanos:
+            fechaCumpleanosString,
 
-            estado: 'PENDIENTE'
-        });
+        estado: 'PENDIENTE'
+    });
+
+const io = obtenerIO();
+
+io.emit('nuevo_cumpleanos', {
+    id: notificacion.id,
+    cliente_id: cliente.id,
+    anio_cumpleanos: anioCumpleanos,
+    fecha_cumpleanos: fechaCumpleanosString,
+    estado: 'PENDIENTE',
+    cliente: {
+        id: cliente.id,
+        nombre: cliente.nombre,
+        correo: cliente.correo
+    }
+});
 
         notificacionesCreadas++;
     }
