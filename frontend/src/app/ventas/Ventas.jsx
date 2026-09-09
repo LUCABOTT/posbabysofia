@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useConfirm } from '../../components/ui/confirmContext'
 
 import {
     Search,
@@ -25,6 +26,7 @@ import {
 } from '../../services/ventaService'
 
 const Ventas = () => {
+    const confirmar = useConfirm()
 
     const navigate = useNavigate()
 
@@ -295,12 +297,14 @@ const Ventas = () => {
             return
         }
 
-        const confirmar =
-            window.confirm(
-                `¿Estás seguro de que deseas anular la venta ${venta.numero}? Esta acción también anulará su factura y restaurará el inventario.`
-            )
+        const aceptado = await confirmar({
+            titulo: 'Anular venta',
+            mensaje: `¿Estás seguro de que deseas anular la venta ${venta.numero}? Esta acción también anulará su factura y restaurará el inventario.`,
+            confirmarTexto: 'Anular',
+            peligrosa: true,
+        })
 
-        if (!confirmar) {
+        if (!aceptado) {
             return
         }
 

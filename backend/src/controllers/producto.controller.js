@@ -275,6 +275,12 @@ const actualizarProducto = async (req, res) => {
             descuento_activo
         } = req.body;
 
+        // Los formularios multipart envían campos vacíos como cadenas.
+        // PostgreSQL necesita null para limpiar un enum o una fecha opcional.
+        const descuentoTipoNormalizado = descuento_tipo || null;
+        const descuentoInicioNormalizado = descuento_inicio || null;
+        const descuentoFinNormalizado = descuento_fin || null;
+
         let categoria = null;
 
         if (categoria_id !== undefined) {
@@ -318,7 +324,12 @@ const actualizarProducto = async (req, res) => {
         }
 
         const errorDescuento = validarDescuento(
-            { descuento_tipo, descuento_valor, descuento_inicio, descuento_fin },
+            {
+                descuento_tipo: descuentoTipoNormalizado,
+                descuento_valor: descuento_valor || 0,
+                descuento_inicio: descuentoInicioNormalizado,
+                descuento_fin: descuentoFinNormalizado
+            },
             precio_venta ?? producto.precio_venta
         );
 
@@ -350,10 +361,10 @@ const actualizarProducto = async (req, res) => {
             stock,
             stock_minimo,
             activo,
-            descuento_tipo,
+            descuento_tipo: descuentoTipoNormalizado,
             descuento_valor,
-            descuento_inicio,
-            descuento_fin,
+            descuento_inicio: descuentoInicioNormalizado,
+            descuento_fin: descuentoFinNormalizado,
             descuento_activo,
             imagen: nuevaImagen
         }, { transaction });

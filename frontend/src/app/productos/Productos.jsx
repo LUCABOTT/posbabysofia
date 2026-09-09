@@ -25,6 +25,7 @@ import {
 } from '../../services/productoService'
 
 import { obtenerCategorias } from '../../services/categoriaService'
+import { useConfirm } from '../../components/ui/confirmContext'
 
 const API_ORIGEN = (
   import.meta.env.VITE_API_URL ||
@@ -42,6 +43,7 @@ const obtenerUrlImagen = (imagen) => {
 }
 
 const Producto = () => {
+  const confirmar = useConfirm()
   // ==============================
   // ESTADOS
   // ==============================
@@ -404,6 +406,14 @@ const Producto = () => {
   const manejarCrear = async (e) => {
     e.preventDefault()
 
+    const aceptado = await confirmar({
+      titulo: 'Agregar producto',
+      mensaje: `¿Estás seguro de agregar el producto "${nombre.trim() || 'sin nombre'}"?`,
+      confirmarTexto: 'Agregar',
+    })
+
+    if (!aceptado) return
+
     setError('')
     setMensaje('')
 
@@ -555,6 +565,14 @@ const Producto = () => {
 
   const manejarActualizar = async (e) => {
     e.preventDefault()
+
+    const aceptado = await confirmar({
+      titulo: 'Editar producto',
+      mensaje: `¿Estás seguro de guardar los cambios de "${nombre.trim() || 'sin nombre'}"?`,
+      confirmarTexto: 'Guardar cambios',
+    })
+
+    if (!aceptado) return
 
     setError('')
     setMensaje('')
@@ -710,12 +728,13 @@ const Producto = () => {
       setMensaje('')
 
       if (producto.activo) {
-        const confirmar =
-          window.confirm(
-            `¿Deseas desactivar el producto "${producto.nombre}"?`
-          )
+        const aceptado = await confirmar({
+          titulo: 'Desactivar producto',
+          mensaje: `¿Deseas desactivar el producto "${producto.nombre}"?`,
+          confirmarTexto: 'Desactivar',
+        })
 
-        if (!confirmar) return
+        if (!aceptado) return
 
         await eliminarProducto(
           producto.id
@@ -769,12 +788,14 @@ const Producto = () => {
 
   const manejarEliminarDefinitivo =
     async (producto) => {
-      const confirmar =
-        window.confirm(
-          `¿Estás seguro de eliminar definitivamente "${producto.nombre}"?\n\nEsta acción eliminará también su imagen y no se puede deshacer.`
-        )
+      const aceptado = await confirmar({
+        titulo: 'Eliminar producto definitivamente',
+        mensaje: `¿Estás seguro de eliminar definitivamente "${producto.nombre}"? Esta acción eliminará también su imagen y no se puede deshacer.`,
+        confirmarTexto: 'Eliminar',
+        peligrosa: true,
+      })
 
-      if (!confirmar) return
+      if (!aceptado) return
 
       try {
         setError('')

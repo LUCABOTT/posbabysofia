@@ -10,8 +10,11 @@ import {
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../../services/api'
+import { useConfirm } from '../../components/ui/confirmContext'
+import FeedbackModal from '../../components/ui/FeedbackModal'
 
 function CumpleanosCorreo() {
+  const confirmar = useConfirm()
   const navigate = useNavigate()
   const { id } = useParams()
 
@@ -30,6 +33,7 @@ function CumpleanosCorreo() {
   const [enviando, setEnviando] = useState(false)
 
   const [error, setError] = useState('')
+  const [resultado, setResultado] = useState(null)
 
 
   // ==========================================
@@ -69,9 +73,9 @@ function CumpleanosCorreo() {
       setMensaje(
         `Hola ${cliente?.nombre || ''},
 
-Queremos desearte un muy feliz cumpleaños. 🎂✨
+Queremos desearle un muy feliz cumpleaños a tu hija. 🎂✨
 
-En Baby Sofia nos encanta poder celebrar contigo este día tan especial.
+En Baby Sofia Boutique nos encanta poder celebrar contigo este día tan especial.
 
 Hemos preparado algunas opciones que podrían gustarte para celebrar esta ocasión.
 
@@ -181,11 +185,13 @@ Hemos preparado algunas opciones que podrían gustarte para celebrar esta ocasi�
       return
     }
 
-    const confirmar = window.confirm(
-      `¿Deseas enviar este correo a ${notificacion?.cliente?.email}?`
-    )
+    const aceptado = await confirmar({
+      titulo: 'Enviar correo',
+      mensaje: `¿Deseas enviar este correo a ${notificacion?.cliente?.email}?`,
+      confirmarTexto: 'Enviar',
+    })
 
-    if (!confirmar) {
+    if (!aceptado) {
       return
     }
 
@@ -207,11 +213,11 @@ Hemos preparado algunas opciones que podrían gustarte para celebrar esta ocasi�
     }
 )
 
-      alert(
-        'Correo enviado correctamente'
-      )
-
-      navigate('/dashboard')
+      setResultado({
+        tipo: 'exito',
+        titulo: 'Correo enviado correctamente',
+        mensaje: `El correo fue enviado a ${notificacion?.cliente?.email || 'el cliente'}.`,
+      })
 
     } catch (error) {
 
@@ -224,6 +230,13 @@ Hemos preparado algunas opciones que podrían gustarte para celebrar esta ocasi�
         error.response?.data?.message ||
         'No fue posible enviar el correo'
       )
+
+      setResultado({
+        tipo: 'error',
+        titulo: 'No fue posible enviar el correo',
+        mensaje: error.response?.data?.message ||
+          'Ocurrió un problema al enviar el correo. Verifica la información e inténtalo nuevamente.',
+      })
 
     } finally {
 
@@ -295,7 +308,8 @@ Hemos preparado algunas opciones que podrían gustarte para celebrar esta ocasi�
 
 
   return (
-    <div className="p-4 sm:p-6">
+    <>
+      <div className="p-4 sm:p-6">
 
       {/* ====================================== */}
       {/* ENCABEZADO */}
@@ -1264,7 +1278,22 @@ Hemos preparado algunas opciones que podrían gustarte para celebrar esta ocasi�
 
       </div>
 
-    </div>
+      </div>
+
+      <FeedbackModal
+        tipo={resultado?.tipo}
+        titulo={resultado?.titulo}
+        mensaje={resultado?.mensaje}
+        onClose={() => {
+          const fueExitoso = resultado?.tipo === 'exito'
+          setResultado(null)
+
+          if (fueExitoso) {
+            navigate('/dashboard')
+          }
+        }}
+      />
+    </>
   )
 }
 

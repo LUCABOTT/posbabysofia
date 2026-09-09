@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useConfirm } from '../../components/ui/confirmContext'
 
 import {
     ArrowLeft,
@@ -42,6 +43,7 @@ const obtenerUrlImagen = (imagen) => {
 }
 
 const NuevaVenta = () => {
+    const confirmar = useConfirm()
 
     const navigate = useNavigate()
 
@@ -487,18 +489,20 @@ const NuevaVenta = () => {
     // LIMPIAR CARRITO
     // =========================================================
 
-    const limpiarVenta = () => {
+    const limpiarVenta = async () => {
 
         if (carrito.length === 0) {
             return
         }
 
-        const confirmar =
-            window.confirm(
-                '¿Deseas eliminar todos los productos de la venta?'
-            )
+        const aceptado = await confirmar({
+            titulo: 'Limpiar venta',
+            mensaje: '¿Deseas eliminar todos los productos de la venta?',
+            confirmarTexto: 'Limpiar',
+            peligrosa: true,
+        })
 
-        if (!confirmar) return
+        if (!aceptado) return
 
         setCarrito([])
         setClienteId('')

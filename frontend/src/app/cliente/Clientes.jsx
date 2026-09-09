@@ -21,6 +21,7 @@ import {
   actualizarCliente,
   desactivarCliente,
 } from '../../services/clientesService'
+import { useConfirm } from '../../components/ui/confirmContext'
 
 const clienteInicial = {
   nombre: '',
@@ -32,6 +33,7 @@ const clienteInicial = {
 }
 
 const Clientes = () => {
+  const confirmar = useConfirm()
   const [clientes, setClientes] = useState([])
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState('todos')
@@ -186,6 +188,16 @@ const Clientes = () => {
   const guardarCliente = async (e) => {
     e.preventDefault()
 
+    const aceptado = await confirmar({
+      titulo: modoEdicion ? 'Editar cliente' : 'Agregar cliente',
+      mensaje: modoEdicion
+        ? `¿Estás seguro de guardar los cambios de "${formulario.nombre.trim() || 'sin nombre'}"?`
+        : `¿Estás seguro de agregar al cliente "${formulario.nombre.trim() || 'sin nombre'}"?`,
+      confirmarTexto: modoEdicion ? 'Guardar cambios' : 'Agregar',
+    })
+
+    if (!aceptado) return
+
     setError('')
     setMensaje('')
 
@@ -244,11 +256,13 @@ const Clientes = () => {
   // ==============================
 
   const manejarDesactivar = async (cliente) => {
-    const confirmar = window.confirm(
-      `¿Deseas desactivar al cliente "${cliente.nombre}"?`
-    )
+    const aceptado = await confirmar({
+      titulo: 'Desactivar cliente',
+      mensaje: `¿Deseas desactivar al cliente "${cliente.nombre}"?`,
+      confirmarTexto: 'Desactivar',
+    })
 
-    if (!confirmar) return
+    if (!aceptado) return
 
     try {
       setError('')
